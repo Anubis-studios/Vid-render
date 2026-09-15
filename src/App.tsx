@@ -1293,20 +1293,27 @@ function Header() {
   }, []);
 
   return (
-    <header className="p-4 border-b border-gray-800 bg-black/80 backdrop-blur-md sticky top-0 z-40">
+    <header className="p-4 border-b border-[#d4af37]/30 bg-black/95 backdrop-blur-md sticky top-0 z-40 luxury-bg-pattern">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-full animate-pulse"></div>
-          <h1 className="text-xl font-bold tracking-wider text-white">
-            GAME-KIT <span className="text-xs text-cyan-400 align-top">TURBO ENGINE v3.0</span>
-          </h1>
-        </div>
-        <div className="flex gap-4 text-xs text-gray-400 font-mono">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            SYSTEM ONLINE
+          <div className="w-8 h-8 bg-gradient-to-br from-[#f4e5c2] via-[#d4af37] to-[#b8860b] rounded-full animate-luxury-glow flex items-center justify-center">
+            <div className="w-4 h-4 bg-black rounded-full"></div>
           </div>
-          <div>{time}</div>
+          <div>
+            <h1 className="text-2xl font-display font-bold tracking-widest gold-shimmer">
+              GAME-KIT
+            </h1>
+            <div className="text-[10px] text-[#d4af37]/60 tracking-[0.3em] uppercase">
+              Turbo Engine v3.0
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-6 text-xs font-mono">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse shadow-[0_0_8px_#d4af37]"></span>
+            <span className="text-[#d4af37]/80">SYSTEM ONLINE</span>
+          </div>
+          <div className="text-[#f4e5c2] font-display tracking-wider">{time}</div>
         </div>
       </div>
     </header>
@@ -1346,22 +1353,24 @@ function ControlPanel({
 }: ControlPanelProps) {
   return (
     <div className="lg:col-span-4 space-y-4">
-      <div className="bg-gray-900/90 p-5 rounded-lg border border-gray-700 shadow-lg">
-        <label className="block text-cyan-400 text-xs mb-2 font-bold uppercase tracking-widest">Input Sequence</label>
+      <div className="luxury-panel p-6 rounded-lg art-deco-corner">
+        <label className="block text-[#d4af37] text-xs mb-3 font-display font-bold uppercase tracking-[0.2em]">
+          ✦ Input Sequence ✦
+        </label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="w-full h-24 bg-black/50 border border-gray-600 rounded p-3 text-sm text-white focus:border-purple-500 focus:outline-none transition-colors resize-none font-mono"
-          placeholder="Describe scene..."
+          className="w-full h-24 luxury-input rounded p-3 text-sm resize-none font-mono"
+          placeholder="Describe your vision..."
         />
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-5 space-y-4">
           <div>
-            <label className="text-[10px] text-gray-500 block mb-1 uppercase">Visual Style</label>
+            <label className="text-[10px] text-[#d4af37]/60 block mb-2 uppercase tracking-widest font-display">Visual Style</label>
             <select
               value={selectedStyle}
               onChange={(e) => setSelectedStyle(e.target.value)}
-              className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+              className="w-full luxury-input rounded p-2.5 text-xs"
             >
               {AVAILABLE_STYLES.map((style) => (
                 <option key={style.id} value={style.id}>
@@ -1369,18 +1378,18 @@ function ControlPanel({
                 </option>
               ))}
             </select>
-            <div className="mt-1 text-[9px] text-purple-400 italic">
+            <div className="mt-2 text-[9px] text-[#d4af37]/70 italic font-display tracking-wide">
               {AVAILABLE_STYLES.find(s => s.id === selectedStyle)?.description}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Duration</label>
+              <label className="text-[10px] text-[#d4af37]/60 block mb-2 uppercase tracking-widest font-display">Duration</label>
               <select
                 value={duration}
                 onChange={(e) => setDuration(parseInt(e.target.value))}
-                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+                className="w-full luxury-input rounded p-2.5 text-xs"
               >
                 {DURATION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1390,11 +1399,11 @@ function ControlPanel({
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Resolution</label>
+              <label className="text-[10px] text-[#d4af37]/60 block mb-2 uppercase tracking-widest font-display">Resolution</label>
               <select
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
-                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+                className="w-full luxury-input rounded p-2.5 text-xs"
               >
                 {RESOLUTION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1407,11 +1416,11 @@ function ControlPanel({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Frame Rate</label>
+              <label className="text-[10px] text-[#d4af37]/60 block mb-2 uppercase tracking-widest font-display">Frame Rate</label>
               <select
                 value={fps}
                 onChange={(e) => setFps(parseInt(e.target.value))}
-                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+                className="w-full luxury-input rounded p-2.5 text-xs"
               >
                 {FPS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1421,11 +1430,11 @@ function ControlPanel({
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Shots</label>
+              <label className="text-[10px] text-[#d4af37]/60 block mb-2 uppercase tracking-widest font-display">Shots</label>
               <select
                 value={shotCount}
                 onChange={(e) => setShotCount(parseInt(e.target.value))}
-                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+                className="w-full luxury-input rounded p-2.5 text-xs"
               >
                 <option value={3}>3 Shots</option>
                 <option value={4}>4 Shots</option>
@@ -1435,11 +1444,11 @@ function ControlPanel({
           </div>
 
           <div>
-            <label className="text-[10px] text-gray-500 block mb-1 uppercase">Format</label>
+            <label className="text-[10px] text-[#d4af37]/60 block mb-2 uppercase tracking-widest font-display">Format</label>
             <select
               value={formatType}
               onChange={(e) => setFormatType(e.target.value)}
-              className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+              className="w-full luxury-input rounded p-2.5 text-xs"
             >
               <option value="webm">WebM (VP8)</option>
               <option value="webm-hq">WebM HQ</option>
@@ -1450,31 +1459,34 @@ function ControlPanel({
         <button
           onClick={onStart}
           disabled={isRunning}
-          className="w-full mt-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded text-sm uppercase tracking-widest transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+          className="w-full mt-6 luxury-button py-3 px-4 rounded text-sm"
         >
-          {isRunning ? 'Rendering...' : 'Initiate Render'}
+          {isRunning ? '◆ Rendering... ◆' : '◆ Initiate Render ◆'}
         </button>
       </div>
 
-      <div className="bg-gray-900/90 p-5 rounded-lg border border-gray-700 shadow-lg">
-        <label className="block text-purple-400 text-xs mb-3 font-bold uppercase tracking-widest">Overrides</label>
-        <div className="space-y-2">
+      <div className="luxury-panel p-6 rounded-lg art-deco-corner">
+        <label className="block text-[#d4af37] text-xs mb-4 font-display font-bold uppercase tracking-[0.2em]">
+          ✦ Director Overrides ✦
+        </label>
+        <div className="space-y-3">
           <label className="flex items-center justify-between cursor-pointer group">
-            <span className="text-xs text-gray-400 group-hover:text-white">MORE FX</span>
+            <span className="text-xs text-[#d4af37]/70 group-hover:text-[#f4e5c2] transition-colors font-display tracking-wide">MORE FX</span>
             <input
               type="checkbox"
               checked={overrideFx}
               onChange={(e) => setOverrideFx(e.target.checked)}
-              className="w-3 h-3 accent-purple-500"
+              className="w-4 h-4 luxury-check"
             />
           </label>
+          <div className="gold-divider"></div>
           <label className="flex items-center justify-between cursor-pointer group">
-            <span className="text-xs text-gray-400 group-hover:text-white">MORE MOTION</span>
+            <span className="text-xs text-[#d4af37]/70 group-hover:text-[#f4e5c2] transition-colors font-display tracking-wide">MORE MOTION</span>
             <input
               type="checkbox"
               checked={overrideMotion}
               onChange={(e) => setOverrideMotion(e.target.checked)}
-              className="w-3 h-3 accent-purple-500"
+              className="w-4 h-4 luxury-check"
             />
           </label>
         </div>
@@ -1491,21 +1503,30 @@ interface StageCardProps {
 
 function StageCard({ stage, children }: StageCardProps) {
   const statusColors: Record<StageStatus, string> = {
-    PENDING: 'text-[10px] bg-gray-800 px-2 py-0.5 rounded text-gray-400',
-    PROCESSING: 'text-[10px] bg-yellow-900/50 text-yellow-400 px-2 py-0.5 rounded border border-yellow-700',
-    DONE: 'text-[10px] bg-green-900/50 text-green-400 px-2 py-0.5 rounded border border-green-700',
+    PENDING: 'text-[10px] bg-black/50 px-2 py-0.5 rounded text-[#d4af37]/50 border border-[#d4af37]/20 font-display tracking-wider',
+    PROCESSING: 'text-[10px] bg-[#d4af37]/10 text-[#f4e5c2] px-2 py-0.5 rounded border border-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.5)] font-display tracking-wider',
+    DONE: 'text-[10px] bg-[#d4af37]/20 text-[#d4af37] px-2 py-0.5 rounded border border-[#d4af37] font-display tracking-wider',
   };
 
-  const cardClass = `stage-card p-3 rounded relative overflow-hidden ${stage.status === 'PROCESSING' ? 'active' : ''} ${stage.status === 'DONE' ? 'completed' : ''}`;
+  const stageColors: Record<number, string> = {
+    1: 'text-[#f4e5c2]',
+    2: 'text-[#d4af37]',
+    3: 'text-[#d4af37]',
+    4: 'text-[#d4af37]',
+    5: 'text-[#f4e5c2]',
+    6: 'text-[#d4af37]',
+  };
+
+  const cardClass = `stage-card p-4 rounded relative overflow-hidden ${stage.status === 'PROCESSING' ? 'active' : ''} ${stage.status === 'DONE' ? 'completed' : ''}`;
 
   return (
     <div className={cardClass}>
-      <div className="flex justify-between items-center mb-1">
-        <h3 className={`font-bold text-sm ${stage.color}`}>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className={`font-display font-bold text-sm tracking-wider ${stageColors[stage.id]}`}>
           {stage.id === 5 ? (
             <span className="flex items-center gap-2">
               {stage.title}
-              <span className="text-[8px] bg-green-900 text-green-300 px-1 rounded border border-green-700">GPU ACCEL</span>
+              <span className="text-[8px] bg-[#d4af37]/20 text-[#d4af37] px-1.5 py-0.5 rounded border border-[#d4af37]/50 font-display tracking-wider">GPU ACCEL</span>
             </span>
           ) : stage.title}
         </h3>
@@ -1514,12 +1535,12 @@ function StageCard({ stage, children }: StageCardProps) {
       {children ? (
         children
       ) : (
-        <div className="text-[10px] text-gray-500 h-4 overflow-hidden whitespace-nowrap">
+        <div className="text-[10px] text-[#d4af37]/60 h-4 overflow-hidden whitespace-nowrap font-mono">
           {stage.detail}
         </div>
       )}
       <div
-        className={`absolute bottom-0 left-0 h-0.5 loader-bar bar-${stage.barColor}`}
+        className="absolute bottom-0 left-0 h-0.5 loader-bar"
         style={{ width: `${stage.barWidth}%` }}
       />
     </div>
@@ -1585,22 +1606,24 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
   };
 
   return (
-    <div className="mt-4 bg-gray-900 border border-green-500/30 p-4 rounded-lg shadow-[0_0_20px_rgba(0,255,0,0.1)] slide-up">
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          <h2 className="text-sm font-bold text-green-400 uppercase">Cartoon Video Ready</h2>
+    <div className="mt-6 luxury-panel p-6 rounded-lg art-deco-corner slide-up animate-luxury-glow">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-3 h-3 rounded-full bg-[#d4af37] animate-pulse shadow-[0_0_10px_#d4af37]"></div>
+          <h2 className="text-base font-display font-bold gold-shimmer tracking-widest uppercase">
+            ✦ Masterpiece Ready ✦
+          </h2>
         </div>
         <button
           onClick={handleDownload}
-          className="text-[10px] bg-green-900/50 text-green-300 px-3 py-1 rounded hover:bg-green-800 transition border border-green-700 cursor-pointer"
+          className="luxury-button text-[10px] px-4 py-2 rounded cursor-pointer font-display tracking-widest"
         >
-          DOWNLOAD WEBM
+          ◆ DOWNLOAD ◆
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="aspect-video bg-black rounded border border-gray-700 relative overflow-hidden group">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="luxury-video-frame aspect-video relative overflow-hidden group">
           <video
             ref={videoRef}
             src={data.videoUrl}
@@ -1612,59 +1635,54 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
             controls
           />
           
-          {/* Play button overlay if autoplay blocked */}
           {showPlayButton && (
             <div 
-              className="absolute inset-0 flex items-center justify-center bg-black/50 cursor-pointer hover:bg-black/30 transition-colors"
+              className="absolute inset-0 flex items-center justify-center bg-black/70 cursor-pointer hover:bg-black/50 transition-colors"
               onClick={handlePlayClick}
             >
-              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border-2 border-white/50 hover:scale-110 transition-transform">
-                <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+              <div className="w-20 h-20 rounded-full bg-[#d4af37]/20 backdrop-blur flex items-center justify-center border-2 border-[#d4af37] hover:scale-110 transition-transform shadow-[0_0_20px_rgba(212,175,55,0.5)]">
+                <svg className="w-10 h-10 text-[#f4e5c2] ml-1" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z"/>
                 </svg>
               </div>
             </div>
           )}
           
-          <div className="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 text-[9px] rounded text-white font-mono pointer-events-none">
+          <div className="absolute bottom-2 right-2 bg-black/80 border border-[#d4af37]/50 px-2 py-1 text-[10px] text-[#d4af37] font-mono pointer-events-none">
             {data.duration}
           </div>
-          <div className="absolute top-1 left-1 bg-red-600/80 px-1.5 py-0.5 text-[9px] rounded text-white font-mono font-bold pointer-events-none">
-            ● CARTOON
+          <div className="absolute top-2 left-2 bg-[#d4af37]/90 px-2 py-1 text-[10px] text-black font-display font-bold tracking-wider pointer-events-none">
+            ✦ {data.style}
           </div>
         </div>
 
-        <div className="space-y-2 text-[10px] font-mono">
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">VIDEO ID</span>
-            <span className="text-cyan-400">{data.id}</span>
+        <div className="space-y-3 text-[11px] font-mono">
+          <div className="flex justify-between border-b border-[#d4af37]/20 pb-2">
+            <span className="text-[#d4af37]/50 font-display tracking-wider">VIDEO ID</span>
+            <span className="text-[#f4e5c2]">{data.id}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">DURATION</span>
-            <span className="text-white">{data.duration}</span>
+          <div className="flex justify-between border-b border-[#d4af37]/20 pb-2">
+            <span className="text-[#d4af37]/50 font-display tracking-wider">DURATION</span>
+            <span className="text-[#f4e5c2]">{data.duration}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">STYLE</span>
-            <span className="text-purple-400">{data.style}</span>
+          <div className="flex justify-between border-b border-[#d4af37]/20 pb-2">
+            <span className="text-[#d4af37]/50 font-display tracking-wider">STYLE</span>
+            <span className="text-[#d4af37] gold-text">{data.style}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">SIZE</span>
-            <span className="text-white">{data.size}</span>
+          <div className="flex justify-between border-b border-[#d4af37]/20 pb-2">
+            <span className="text-[#d4af37]/50 font-display tracking-wider">SIZE</span>
+            <span className="text-[#f4e5c2]">{data.size}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">FORMAT</span>
-            <span className="text-white">WebM (VP8/VP9)</span>
+          <div className="flex justify-between border-b border-[#d4af37]/20 pb-2">
+            <span className="text-[#d4af37]/50 font-display tracking-wider">FORMAT</span>
+            <span className="text-[#f4e5c2]">WebM (VP8/VP9)</span>
           </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">RESOLUTION</span>
-            <span className="text-white">640×360</span>
+          <div className="flex justify-between border-b border-[#d4af37]/20 pb-2">
+            <span className="text-[#d4af37]/50 font-display tracking-wider">RENDER TIME</span>
+            <span className="text-[#d4af37] gold-text">{data.renderTime}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">FPS</span>
-            <span className="text-white">30</span>
-          </div>
-          <div className="mt-2 p-2 bg-gray-800/50 rounded text-[9px] text-gray-400 italic border-l-2 border-green-500">
-            "Real cartoon-style animation rendered in <span className="text-green-400 font-bold">{data.renderTime}</span> using Canvas API + MediaRecorder. Features bold outlines, flat colors, squash-and-stretch animation, and comic effects."
+          <div className="mt-4 p-3 bg-black/50 rounded border border-[#d4af37]/30 text-[10px] text-[#d4af37]/70 italic font-display tracking-wide">
+            "Crafted in <span className="text-[#f4e5c2] font-bold gold-text">{data.renderTime}</span> — a masterpiece rendered with precision and artistry."
           </div>
         </div>
       </div>
@@ -1691,7 +1709,7 @@ function App() {
   const [targetFps, setTargetFps] = useState(30);
 
   const [statusText, setStatusText] = useState('WAITING...');
-  const [statusColor, setStatusColor] = useState('bg-gray-600');
+  const [statusColor, setStatusColor] = useState('bg-[#d4af37]/50');
   const [pipelineStatus, setPipelineStatus] = useState('IDLE');
 
   const [stages, setStages] = useState<StageData[]>([
@@ -1741,7 +1759,7 @@ function App() {
     resetStages();
 
     setStatusText('INITIALIZING REAL-TIME ENGINE...');
-    setStatusColor('bg-yellow-500');
+    setStatusColor('bg-[#d4af37]');
     setPipelineStatus('RUNNING');
 
     try {
@@ -1946,14 +1964,14 @@ function App() {
 
       setShowOutput(true);
       setLiveMode(false);
-      setStatusText('PIPELINE FINISHED — VIDEO READY');
-      setStatusColor('bg-green-500');
+      setStatusText('PIPELINE FINISHED — MASTERPIECE READY');
+      setStatusColor('bg-[#d4af37]');
       setPipelineStatus('COMPLETED');
 
     } catch (e) {
       console.error('Pipeline error:', e);
       setStatusText('ERROR: ' + (e as Error).message);
-      setStatusColor('bg-red-500');
+      setStatusColor('bg-red-700');
       setPipelineStatus('ERROR');
     } finally {
       if (animationFrameRef.current) {
@@ -2002,19 +2020,19 @@ function App() {
           isRunning={isRunning}
         />
 
-        <div className="lg:col-span-8 space-y-3">
+        <div className="lg:col-span-8 space-y-4">
           {/* Live Canvas Preview - ALWAYS in DOM */}
-          <div className={`bg-black/80 border rounded-lg p-3 transition-all ${liveMode ? 'border-cyan-500/50 shadow-[0_0_20px_rgba(0,255,255,0.2)]' : 'border-gray-700'}`}>
-            <div className="flex justify-between items-center mb-2">
-              <div className="flex items-center gap-2">
-                {liveMode && <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>}
-                <span className={`text-xs font-bold uppercase ${liveMode ? 'text-red-400' : 'text-gray-500'}`}>
-                  {liveMode ? 'LIVE RENDER' : 'RENDER CANVAS'}
+          <div className={`luxury-panel rounded-lg p-4 transition-all art-deco-corner ${liveMode ? 'animate-luxury-glow' : ''}`}>
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-3">
+                {liveMode && <div className="w-2.5 h-2.5 rounded-full bg-[#d4af37] animate-pulse shadow-[0_0_8px_#d4af37]"></div>}
+                <span className={`text-xs font-display font-bold uppercase tracking-[0.2em] ${liveMode ? 'gold-text' : 'text-[#d4af37]/50'}`}>
+                  {liveMode ? '✦ LIVE RENDER ✦' : '✦ RENDER CANVAS ✦'}
                 </span>
               </div>
-              {liveMode && <div className="text-[10px] text-cyan-400 font-mono">{fps} FPS</div>}
+              {liveMode && <div className="text-[11px] text-[#f4e5c2] font-mono gold-text">{fps} FPS</div>}
             </div>
-            <div className="aspect-video bg-black rounded overflow-hidden border border-gray-700 relative">
+            <div className="luxury-video-frame aspect-video relative overflow-hidden">
               <canvas
                 ref={canvasRef}
                 width={640}
@@ -2023,50 +2041,50 @@ function App() {
                 style={{ imageRendering: 'auto' }}
               />
               {!liveMode && !showOutput && (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-xs">
-                  Canvas ready — Click "Initiate Render" to start
+                <div className="absolute inset-0 flex items-center justify-center text-[#d4af37]/40 text-xs font-display tracking-widest">
+                  ✦ Canvas ready — Click "Initiate Render" to start ✦
                 </div>
               )}
             </div>
           </div>
 
           {/* Status Bar */}
-          <div className="bg-black/60 p-3 rounded border border-gray-800 flex justify-between items-center">
+          <div className="luxury-panel p-3 rounded flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className={`w-2 h-2 rounded-full ${statusColor} ${isRunning ? 'animate-pulse' : ''}`}></div>
-              <span className="text-xs font-mono text-gray-400">{statusText}</span>
+              <div className={`w-2.5 h-2.5 rounded-full ${statusColor} ${isRunning ? 'animate-pulse shadow-[0_0_8px_#d4af37]' : ''}`}></div>
+              <span className="text-xs font-mono text-[#d4af37]/80">{statusText}</span>
             </div>
-            <div className="text-[10px] text-gray-500 font-mono">
-              ENGINE STATUS: <span className="text-cyan-500">{pipelineStatus}</span>
+            <div className="text-[10px] text-[#d4af37]/50 font-mono font-display tracking-wider">
+              ENGINE STATUS: <span className="text-[#f4e5c2] gold-text">{pipelineStatus}</span>
             </div>
           </div>
 
           {/* Pipeline Stages */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {stages.map((stage) => (
               <StageCard key={stage.id} stage={stage}>
                 {stage.id === 5 ? (
                   <>
-                    <div className="flex gap-1 mt-2 h-8">
+                    <div className="flex gap-1.5 mt-2 h-9">
                       {[20, 40, 60, 80, 100].map((pct, i) => (
                         <div
                           key={i}
-                          className={`flex-1 rounded border flex items-center justify-center text-[8px] transition-all duration-200 ${
+                          className={`flex-1 rounded border flex items-center justify-center text-[9px] font-display tracking-wider transition-all duration-200 ${
                             renderProgress >= pct
-                              ? 'bg-green-900/50 border-green-600 text-green-400'
-                              : 'bg-gray-800 border-gray-600 text-gray-500'
+                              ? 'bg-[#d4af37]/20 border-[#d4af37] text-[#f4e5c2] shadow-[0_0_8px_rgba(212,175,55,0.4)]'
+                              : 'bg-black/50 border-[#d4af37]/20 text-[#d4af37]/40'
                           }`}
                         >
-                          {renderProgress >= pct ? `✓ ${pct}%` : `${pct}%`}
+                          {renderProgress >= pct ? `✦ ${pct}%` : `${pct}%`}
                         </div>
                       ))}
                     </div>
                     {stage.detail && (
-                      <div className="text-[10px] text-gray-500 mt-1">{stage.detail}</div>
+                      <div className="text-[10px] text-[#d4af37]/60 mt-2 font-mono">{stage.detail}</div>
                     )}
                   </>
                 ) : (
-                  <div className="text-[10px] text-gray-500 h-4 overflow-hidden whitespace-nowrap">
+                  <div className="text-[10px] text-[#d4af37]/60 h-4 overflow-hidden whitespace-nowrap font-mono">
                     {stage.detail}
                   </div>
                 )}
