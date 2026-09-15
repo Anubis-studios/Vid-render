@@ -1,1 +1,84 @@
 @import "tailwindcss";
+
+@theme {
+  --font-mono: 'Inconsolata', monospace;
+}
+
+body {
+  font-family: 'Inconsolata', monospace;
+  background-color: #050510;
+  color: #e0e0e0;
+  overflow-x: hidden;
+}
+
+/* CRT Scanline Effect */
+.scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.2) 50%,
+    rgba(0,0,0,0.2)
+  );
+  background-size: 100% 4px;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.15;
+}
+
+/* Neon Glows */
+.neon-text-cyan { text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff; }
+.neon-text-pink { text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff; }
+.neon-border { box-shadow: 0 0 5px #00ffff, inset 0 0 5px #00ffff; border: 1px solid #00ffff; }
+
+/* Animations */
+@keyframes pulse-fast {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-pulse-fast { animation: pulse-fast 1s infinite; }
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.slide-up { animation: slide-up 0.3s ease-out forwards; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0a15; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #00ffff; }
+
+.stage-card {
+  background: rgba(20, 20, 35, 0.6);
+  backdrop-filter: blur(5px);
+  border-left: 3px solid #333;
+  transition: all 0.2s ease;
+}
+.stage-card.active {
+  border-left-color: #00ffff;
+  background: rgba(0, 255, 255, 0.05);
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+}
+.stage-card.completed {
+  border-left-color: #00ff00;
+  opacity: 0.7;
+}
+
+.loader-bar {
+  height: 2px;
+  background: linear-gradient(90deg, #ff00ff, #00ffff);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+/* Stage-specific bar colors */
+.bar-cyan { background: #00ffff; }
+.bar-purple { background: #a855f7; }
+.bar-yellow { background: #eab308; }
+.bar-red { background: #ef4444; }
+.bar-green { background: #22c55e; }
+.bar-blue { background: #3b82f6; }
