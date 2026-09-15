@@ -879,6 +879,46 @@ interface FinalOutputProps {
 }
 
 function FinalOutput({ data, visible }: FinalOutputProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Auto-play video when it becomes visible
+  useEffect(() => {
+    if (visible && data && videoRef.current) {
+      const video = videoRef.current;
+      
+      // Force play with multiple attempts
+      const attemptPlay = async () => {
+        try {
+          video.muted = true;
+          await video.play();
+        } catch (err) {
+          console.log('Autoplay attempt failed, retrying...', err);
+          // Retry after short delay
+          setTimeout(async () => {
+            try {
+              await video.play();
+            } catch (e) {
+              console.log('Final autoplay attempt failed', e);
+            }
+          }, 100);
+        }
+      };
+
+      // Play when video is ready
+      if (video.readyState >= 2) {
+        attemptPlay();
+      } else {
+        video.addEventListener('canplay', attemptPlay, { once: true });
+        video.addEventListener('loadeddata', attemptPlay, { once: true });
+      }
+
+      return () => {
+        video.removeEventListener('canplay', attemptPlay);
+        video.removeEventListener('loadeddata', attemptPlay);
+      };
+    }
+  }, [visible, data]);
+
   if (!visible || !data) return null;
 
   const handleDownload = () => {
@@ -893,7 +933,10 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
   return (
     <div className="mt-4 bg-gray-900 border border-green-500/30 p-4 rounded-lg shadow-[0_0_20px_rgba(0,255,0,0.1)] slide-up">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="text-sm font-bold text-green-400 uppercase">Generation Complete</h2>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+          <h2 className="text-sm font-bold text-green-400 uppercase">Generation Complete — Auto-Playing</h2>
+        </div>
         <button
           onClick={handleDownload}
           className="text-[10px] bg-green-900/50 text-green-300 px-3 py-1 rounded hover:bg-green-800 transition border border-green-700 cursor-pointer"
@@ -905,15 +948,20 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="aspect-video bg-black rounded border border-gray-700 relative overflow-hidden group">
           <video
+            ref={videoRef}
             src={data.videoUrl}
             className="w-full h-full object-cover"
             autoPlay
             loop
             muted
             playsInline
+            controls
           />
-          <div className="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 text-[9px] rounded text-white font-mono">
+          <div className="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 text-[9px] rounded text-white font-mono pointer-events-none">
             {data.duration}
+          </div>
+          <div className="absolute top-1 left-1 bg-red-600/80 px-1.5 py-0.5 text-[9px] rounded text-white font-mono font-bold animate-pulse pointer-events-none">
+            ● PLAYING
           </div>
         </div>
 
@@ -936,10 +984,18 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
           </div>
           <div className="flex justify-between border-b border-gray-800 pb-1">
             <span className="text-gray-500">FORMAT</span>
-            <span className="text-white">WebM (VP8)</span>
+            <span className="text-white">WebM (VP8/VP9)</span>
+          </div>
+          <div className="flex justify-between border-b border-gray-800 pb-1">
+            <span className="text-gray-500">RESOLUTION</span>
+            <span className="text-white">640×360</span>
+          </div>
+          <div className="flex justify-between border-b border-gray-800 pb-1">
+            <span className="text-gray-500">FPS</span>
+            <span className="text-white">30</span>
           </div>
           <div className="mt-2 p-2 bg-gray-800/50 rounded text-[9px] text-gray-400 italic border-l-2 border-green-500">
-            "Rendered in <span className="text-green-400 font-bold">{data.renderTime}</span> using Turbo Engine with Canvas API + MediaRecorder."
+            "Rendered in <span className="text-green-400 font-bold">{data.renderTime}</span> using Canvas API + MediaRecorder. Video auto-plays on completion."
           </div>
         </div>
       </div>
@@ -957,6 +1013,7 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
   const [outputData, setOutputData] = useState<OutputData | null>(null);
+  const [liveMode, setLiveMode] = useState(false);
 
   const [statusText, setStatusText] = useState('WAITING...');
   const [statusColor, setStatusColor] = useState('bg-gray-600');
@@ -973,8 +1030,10 @@ function App() {
 
   const [renderProgress, setRenderProgress] = useState(0);
   const [previewFrame, setPreviewFrame] = useState<string>('');
+  const [fps, setFps] = useState(0);
   const pipelineRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   const updateStage = useCallback((id: number, updates: Partial<StageData>) => {
     setStages(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
@@ -1012,9 +1071,10 @@ function App() {
     setIsRunning(true);
     setShowOutput(false);
     setOutputData(null);
+    setLiveMode(true);
     resetStages();
 
-    setStatusText('PROCESSING REQUEST...');
+    setStatusText('INITIALIZING REAL-TIME ENGINE...');
     setStatusColor('bg-yellow-500');
     setPipelineStatus('RUNNING');
 
@@ -1022,7 +1082,7 @@ function App() {
       // --- STAGE 1: REAL PROMPT SYNTHESIS ---
       let parsed: ParsedPrompt;
       await runStage(1, async () => {
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 200));
         parsed = analyzePrompt(prompt);
         const details = [
           `STYLE: ${parsed.style}`,
@@ -1037,7 +1097,7 @@ function App() {
       // --- STAGE 2: REAL STORYBOARD GENERATION ---
       let shots: Shot[];
       await runStage(2, async () => {
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 200));
         shots = generateStoryboard(prompt, shotCount, parsed!);
         const totalDuration = shots.reduce((sum, s) => sum + s.duration, 0).toFixed(2);
         const shotList = shots.map(s => `S${s.id}:${s.action}`).join(' → ');
@@ -1046,20 +1106,12 @@ function App() {
 
       // --- STAGE 3: REAL DEVICE PERFORMANCE DETECTION ---
       await runStage(3, async () => {
-        await new Promise(r => setTimeout(r, 400));
-
-        // Real device capability detection
+        await new Promise(r => setTimeout(r, 300));
         const capabilities: string[] = [];
-
-        // Check for hardware concurrency (CPU cores)
         const cores = navigator.hardwareConcurrency || 'unknown';
         capabilities.push(`CPU: ${cores} cores`);
-
-        // Check for device memory
         const memory = (navigator as any).deviceMemory;
         if (memory) capabilities.push(`RAM: ${memory}GB`);
-
-        // Check for GPU via WebGL
         try {
           const testCanvas = document.createElement('canvas');
           const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
@@ -1067,7 +1119,7 @@ function App() {
             const debugInfo = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
             if (debugInfo) {
               const gpu = (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-              capabilities.push(`GPU: ${gpu.substring(0, 20)}`);
+              capabilities.push(`GPU: ${gpu.substring(0, 25)}`);
             } else {
               capabilities.push('GPU: WebGL Active');
             }
@@ -1075,126 +1127,132 @@ function App() {
         } catch {
           capabilities.push('GPU: Canvas2D');
         }
-
-        // Check connection
         const conn = (navigator as any).connection;
-        if (conn) {
-          capabilities.push(`NET: ${conn.effectiveType || 'unknown'}`);
-        }
-
-        // Check for motion sensors
-        if (window.DeviceOrientationEvent) {
-          capabilities.push('GYRO: ✓');
-        }
-
+        if (conn) capabilities.push(`NET: ${conn.effectiveType || 'unknown'}`);
+        if (window.DeviceOrientationEvent) capabilities.push('GYRO: ✓');
         updateStage(3, { detail: capabilities.join(' | ') });
       });
 
-      // --- STAGE 4: REAL DIRECTOR AI (Cinematic Computation) ---
+      // --- STAGE 4: REAL DIRECTOR AI ---
       await runStage(4, async () => {
-        await new Promise(r => setTimeout(r, 300));
-
-        // Compute real cinematic decisions based on prompt analysis
+        await new Promise(r => setTimeout(r, 200));
         const decisions: string[] = [];
-
-        // Camera decisions based on mood
-        if (parsed!.mood === 'ENERGETIC') {
-          decisions.push('CAM: FAST_PAN');
-        } else if (parsed!.mood === 'CALM') {
-          decisions.push('CAM: SLOW_DOLLY');
-        } else {
-          decisions.push('CAM: DYNAMIC');
-        }
-
-        // FX intensity based on overrides and analysis
+        if (parsed!.mood === 'ENERGETIC') decisions.push('CAM: FAST_PAN');
+        else if (parsed!.mood === 'CALM') decisions.push('CAM: SLOW_DOLLY');
+        else decisions.push('CAM: DYNAMIC');
         const fxIntensity = overrideFx ? 2.0 : (parsed!.effects.length > 2 ? 1.5 : 1.0);
         decisions.push(`FX_INT: ${fxIntensity}x`);
-
-        // Motion based on override
         const motionScale = overrideMotion ? 1.8 : 1.0;
         decisions.push(`MOTION: ${motionScale}x`);
-
-        // Color grading
         decisions.push(`GRADE: ${parsed!.style}`);
-
-        // Aspect ratio decision
         decisions.push('RATIO: 16:9');
-
         updateStage(4, { detail: decisions.join(' | ') });
       });
 
-      // --- STAGE 5: REAL CANVAS RENDER ENGINE ---
+      // --- STAGE 5: REAL-TIME RENDER ENGINE with LIVE PREVIEW ---
       await runStage(5, async () => {
-        // Create offscreen canvas for rendering
+        updateStage(5, { detail: 'STARTING REAL-TIME RENDER LOOP...' });
+
+        // Create visible canvas for live rendering
         const canvas = document.createElement('canvas');
         canvas.width = 640;
         canvas.height = 360;
         canvasRef.current = canvas;
 
-        const renderer = new TurboRenderer(canvas, parsed!, shots!);
-
-        const totalFrames = 180; // 6 seconds at 30fps
-        const startTime = performance.now();
-
-        // Render all frames
-        for (let i = 0; i < totalFrames; i++) {
-          renderer.renderFrame();
-
-          // Update progress every 10 frames
-          if (i % 10 === 0) {
-            const progress = Math.round((i / totalFrames) * 100);
-            setRenderProgress(progress);
-            updateStage(5, { barWidth: progress });
-
-            // Capture preview thumbnail
-            setPreviewFrame(canvas.toDataURL('image/jpeg', 0.5));
-          }
-
-          // Yield to browser every 30 frames to keep UI responsive
-          if (i % 30 === 0) {
-            await new Promise(r => setTimeout(r, 0));
-          }
+        // Attach to live preview container
+        const liveContainer = document.getElementById('live-preview-container');
+        if (liveContainer) {
+          liveContainer.innerHTML = '';
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
+          canvas.style.objectFit = 'cover';
+          canvas.style.borderRadius = '4px';
+          liveContainer.appendChild(canvas);
         }
 
-        const endTime = performance.now();
-        const renderTime = ((endTime - startTime) / 1000).toFixed(2);
+        const renderer = new TurboRenderer(canvas, parsed!, shots!);
 
-        // Capture final frame as thumbnail
-        setPreviewFrame(canvas.toDataURL('image/jpeg', 0.8));
-        setRenderProgress(100);
-        updateStage(5, {
-          detail: `RENDER COMPLETE: ${totalFrames} FRAMES @ 30FPS (${renderTime}s) | 640x360`,
-          barWidth: 100,
+        const startTime = performance.now();
+        const targetFPS = 30;
+        const frameInterval = 1000 / targetFPS;
+        let lastFrameTime = 0;
+        let framesRendered = 0;
+        const totalFrames = 180; // 6 seconds at 30fps
+
+        // Real-time render loop using requestAnimationFrame
+        return new Promise<void>((resolve) => {
+          const renderLoop = (timestamp: number) => {
+            const elapsed = timestamp - lastFrameTime;
+
+            if (elapsed >= frameInterval) {
+              renderer.renderFrame();
+              framesRendered++;
+              lastFrameTime = timestamp;
+
+              // Update FPS display
+              const currentFps = Math.round(1000 / elapsed);
+              setFps(currentFps);
+
+              // Update progress
+              const progress = Math.min(100, Math.round((framesRendered / totalFrames) * 100));
+              setRenderProgress(progress);
+              updateStage(5, {
+                barWidth: progress,
+                detail: `LIVE RENDER: ${framesRendered}/${totalFrames} FRAMES | ${currentFps} FPS | ${((timestamp - startTime) / 1000).toFixed(1)}s`,
+              });
+
+              // Update preview thumbnail every 30 frames
+              if (framesRendered % 30 === 0) {
+                setPreviewFrame(canvas.toDataURL('image/jpeg', 0.5));
+              }
+
+              // Check if done
+              if (framesRendered >= totalFrames) {
+                const endTime = performance.now();
+                const renderTime = ((endTime - startTime) / 1000).toFixed(2);
+                setRenderProgress(100);
+                updateStage(5, {
+                  detail: `RENDER COMPLETE: ${totalFrames} FRAMES @ ${targetFPS}FPS (${renderTime}s) | 640x360`,
+                  barWidth: 100,
+                });
+                setPreviewFrame(canvas.toDataURL('image/jpeg', 0.8));
+
+                // Store for export
+                (window as any).__renderer = renderer;
+                (window as any).__renderTime = renderTime;
+                (window as any).__parsed = parsed;
+                (window as any).__shots = shots;
+                (window as any).__canvas = canvas;
+
+                resolve();
+                return;
+              }
+            }
+
+            animationFrameRef.current = requestAnimationFrame(renderLoop);
+          };
+
+          animationFrameRef.current = requestAnimationFrame(renderLoop);
         });
-
-        // Store for export stage
-        (window as any).__renderer = renderer;
-        (window as any).__renderTime = renderTime;
-        (window as any).__parsed = parsed;
-        (window as any).__shots = shots;
       });
 
       // --- STAGE 6: REAL VIDEO EXPORT via MediaRecorder ---
       await runStage(6, async () => {
-        updateStage(6, { detail: 'Encoding video with MediaRecorder API...' });
+        updateStage(6, { detail: 'STARTING LIVE CAPTURE + ENCODING...' });
 
-        const canvas = canvasRef.current!;
+        const canvas = (window as any).__canvas as HTMLCanvasElement;
         const renderer = (window as any).__renderer as TurboRenderer;
         const renderTime = (window as any).__renderTime;
         const parsedFinal = (window as any).__parsed as ParsedPrompt;
         const shotsFinal = (window as any).__shots as Shot[];
 
-        // Re-render and capture with MediaRecorder
+        // Capture stream from canvas at 30fps
         const stream = canvas.captureStream(30);
 
         // Determine supported mime type
-        let mimeType = 'video/webm;codecs=vp8';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/webm';
-        }
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/mp4';
-        }
+        let mimeType = 'video/webm;codecs=vp9';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
         const bitrate = formatType === 'webm-hq' ? 5000000 : 2500000;
         const recorder = new MediaRecorder(stream, {
@@ -1214,25 +1272,48 @@ function App() {
           };
         });
 
-        recorder.start();
+        // Start recording
+        recorder.start(100); // Collect data every 100ms
 
-        // Render frames for recording (3 seconds of content)
-        const totalRecordFrames = 90;
-        for (let i = 0; i < totalRecordFrames; i++) {
-          renderer.renderFrame();
-          // Small delay to let MediaRecorder capture frames
-          if (i % 3 === 0) {
-            await new Promise(r => setTimeout(r, 16));
-          }
-        }
+        // Continue rendering in real-time while recording (6 seconds)
+        const recordDuration = 6000;
+        const recordStart = performance.now();
+        const targetFPS = 30;
+        const frameInterval = 1000 / targetFPS;
+        let lastFrame = 0;
+        let recordedFrames = 0;
 
+        await new Promise<void>((resolve) => {
+          const recordLoop = (timestamp: number) => {
+            const elapsed = timestamp - recordStart;
+
+            if (elapsed >= recordDuration) {
+              resolve();
+              return;
+            }
+
+            if (timestamp - lastFrame >= frameInterval) {
+              renderer.renderFrame();
+              recordedFrames++;
+              lastFrame = timestamp;
+
+              const progress = Math.round((elapsed / recordDuration) * 100);
+              updateStage(6, {
+                barWidth: progress,
+                detail: `RECORDING: ${recordedFrames} FRAMES | ${(elapsed / 1000).toFixed(1)}s/${recordDuration / 1000}s | ${mimeType}`,
+              });
+            }
+
+            requestAnimationFrame(recordLoop);
+          };
+          requestAnimationFrame(recordLoop);
+        });
+
+        // Stop recording
         recorder.stop();
-        const videoBlob = await recordingDone;
-
-        // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
 
-        // Create video URL
+        const videoBlob = await recordingDone;
         const videoUrl = URL.createObjectURL(videoBlob);
         const sizeMB = (videoBlob.size / (1024 * 1024)).toFixed(2);
 
@@ -1249,11 +1330,16 @@ function App() {
           thumbnailUrl: previewFrame,
         });
 
-        updateStage(6, { detail: `EXPORTED: ${mimeType} | ${sizeMB}MB | ${totalRecordFrames} FRAMES` });
+        updateStage(6, {
+          detail: `EXPORTED: ${mimeType} | ${sizeMB}MB | ${recordedFrames} FRAMES | READY TO PLAY`,
+          barWidth: 100,
+        });
+
         setShowOutput(true);
+        setLiveMode(false);
       });
 
-      setStatusText('PIPELINE FINISHED SUCCESSFULLY');
+      setStatusText('PIPELINE FINISHED — VIDEO READY');
       setStatusColor('bg-green-500');
       setPipelineStatus('COMPLETED');
     } catch (e) {
@@ -1262,10 +1348,13 @@ function App() {
       setStatusColor('bg-red-500');
       setPipelineStatus('ERROR');
     } finally {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       setIsRunning(false);
       pipelineRef.current = false;
     }
-  }, [prompt, shotCount, formatType, overrideFx, overrideMotion, resetStages, runStage, updateStage, previewFrame]);
+  }, [prompt, shotCount, formatType, overrideFx, overrideMotion, resetStages, runStage, updateStage]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -1301,6 +1390,22 @@ function App() {
             </div>
           </div>
 
+          {/* Live Preview */}
+          {liveMode && (
+            <div className="bg-black/80 border border-cyan-500/50 rounded-lg p-3 shadow-[0_0_20px_rgba(0,255,255,0.2)]">
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                  <span className="text-xs font-bold text-red-400 uppercase">LIVE RENDER</span>
+                </div>
+                <div className="text-[10px] text-cyan-400 font-mono">{fps} FPS</div>
+              </div>
+              <div id="live-preview-container" className="aspect-video bg-black rounded overflow-hidden border border-gray-700">
+                {/* Canvas will be injected here */}
+              </div>
+            </div>
+          )}
+
           {/* Pipeline Stages */}
           <div className="space-y-2">
             {stages.map((stage) => (
@@ -1324,7 +1429,7 @@ function App() {
                     {stage.detail && (
                       <div className="text-[10px] text-gray-500 mt-1">{stage.detail}</div>
                     )}
-                    {previewFrame && (
+                    {!liveMode && previewFrame && (
                       <div className="mt-2 rounded overflow-hidden border border-gray-700">
                         <img src={previewFrame} alt="Render preview" className="w-full h-20 object-cover opacity-70" />
                       </div>
