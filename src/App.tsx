@@ -45,7 +45,6 @@ interface Shot {
 function analyzePrompt(prompt: string): ParsedPrompt {
   const lower = prompt.toLowerCase();
 
-  // Style detection
   const styleMap: Record<string, string[]> = {
     'CYBERPUNK': ['neon', 'cyber', 'futur', 'hack', 'glitch', 'chrome', 'hologram'],
     'PIXEL ART': ['pixel', '8-bit', '16-bit', 'retro game', 'chiptune'],
@@ -65,7 +64,6 @@ function analyzePrompt(prompt: string): ParsedPrompt {
     }
   }
 
-  // Mood detection
   const moodMap: Record<string, string[]> = {
     'ENERGETIC': ['jump', 'run', 'fast', 'speed', 'action', 'dance', 'fly'],
     'CALM': ['peace', 'quiet', 'slow', 'gentle', 'float', 'drift', 'zen'],
@@ -82,12 +80,6 @@ function analyzePrompt(prompt: string): ParsedPrompt {
     }
   }
 
-  // Subject extraction (nouns after articles or descriptive words)
-  const subjectPatterns = [
-    /\b(a|an|the)\s+([\w\s]+?)(?=\s+(?:jump|run|walk|fly|dance|float|sit|stand|play|move))/gi,
-    /\b([\w]+(?:\s+[\w]+)?)\s+(?:jumping|running|walking|flying|dancing|floating)/gi,
-  ];
-
   const subjects: string[] = [];
   const commonSubjects = ['cat', 'dog', 'person', 'robot', 'character', 'bird', 'fish', 'car', 'ship', 'dragon', 'warrior', 'ninja', 'astronaut', 'wizard'];
   for (const s of commonSubjects) {
@@ -95,7 +87,6 @@ function analyzePrompt(prompt: string): ParsedPrompt {
   }
   if (subjects.length === 0) subjects.push('character');
 
-  // Environment
   const envMap: Record<string, string[]> = {
     'CITY': ['city', 'urban', 'street', 'building', 'town', 'metro'],
     'FOREST': ['forest', 'tree', 'wood', 'jungle', 'nature'],
@@ -113,7 +104,6 @@ function analyzePrompt(prompt: string): ParsedPrompt {
     }
   }
 
-  // Effects
   const effectMap: Record<string, string[]> = {
     'PARTICLES': ['particle', 'spark', 'dust', 'snow', 'rain', 'confetti'],
     'TRAIL': ['trail', 'streak', 'motion blur', 'speed lines'],
@@ -130,7 +120,6 @@ function analyzePrompt(prompt: string): ParsedPrompt {
   }
   if (effects.length === 0) effects.push('PARTICLES');
 
-  // Colors
   const colorMap: Record<string, string[]> = {
     '#00ffff': ['cyan', 'aqua', 'teal', 'turquoise'],
     '#ff00ff': ['magenta', 'pink', 'fuchsia', 'purple'],
@@ -148,7 +137,6 @@ function analyzePrompt(prompt: string): ParsedPrompt {
       colors.push(color);
     }
   }
-  // Default palette based on style
   if (colors.length === 0) {
     if (style === 'CYBERPUNK' || style === 'NEON') colors.push('#00ffff', '#ff00ff', '#ffff00');
     else if (style === 'VAPORWAVE') colors.push('#ff71ce', '#01cdfe', '#05ffa1');
@@ -156,13 +144,11 @@ function analyzePrompt(prompt: string): ParsedPrompt {
     else colors.push('#00ffff', '#a855f7', '#22c55e');
   }
 
-  // All keywords
   const keywords = prompt.split(/\s+/).filter(w => w.length > 2);
 
   return { style, mood, subjects, environment, effects, colors, keywords };
 }
 
-// --- Real Storyboard Generation ---
 function generateStoryboard(prompt: string, shotCount: number, parsed: ParsedPrompt): Shot[] {
   const cameraMovements = ['PAN_LEFT', 'PAN_RIGHT', 'ZOOM_IN', 'ZOOM_OUT', 'STATIC', 'DOLLY', 'ORBIT'];
   const actions = ['ENTER', 'ACTION', 'PEAK', 'TRANSITION', 'EXIT'];
@@ -274,7 +260,6 @@ class TurboRenderer {
     const ctx = this.ctx;
     const t = this.frameCount / 60;
 
-    // Dynamic gradient background based on environment
     const gradient = ctx.createLinearGradient(0, 0, this.width, this.height);
 
     switch (this.parsed.environment) {
@@ -305,7 +290,6 @@ class TurboRenderer {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // Grid lines for cyberpunk/city
     if (this.parsed.environment === 'CITY' || this.parsed.style === 'CYBERPUNK') {
       ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
       ctx.lineWidth = 0.5;
@@ -326,7 +310,6 @@ class TurboRenderer {
       }
     }
 
-    // Stars for space
     if (this.parsed.environment === 'SPACE') {
       for (let i = 0; i < 50; i++) {
         const sx = (Math.sin(i * 123.456) * 0.5 + 0.5) * this.width;
@@ -344,12 +327,10 @@ class TurboRenderer {
     const cx = this.width / 2;
     const cy = this.height / 2;
 
-    // Subject rendering based on type
     const subject = this.parsed.subjects[0] || 'character';
 
     ctx.save();
 
-    // Movement based on action
     let offsetX = 0, offsetY = 0;
     switch (shot.action) {
       case 'ENTER':
@@ -373,13 +354,11 @@ class TurboRenderer {
     const sx = cx + offsetX;
     const sy = cy + offsetY;
 
-    // Glow effect
     if (this.parsed.effects.includes('GLOW') || this.parsed.style === 'NEON' || this.parsed.style === 'CYBERPUNK') {
       ctx.shadowColor = this.parsed.colors[0] || '#00ffff';
       ctx.shadowBlur = 20 + Math.sin(t * 3) * 10;
     }
 
-    // Draw subject shape
     ctx.fillStyle = this.parsed.colors[0] || '#00ffff';
     ctx.strokeStyle = this.parsed.colors[1] || '#ff00ff';
     ctx.lineWidth = 2;
@@ -401,23 +380,19 @@ class TurboRenderer {
 
   private drawCharacter(x: number, y: number, t: number) {
     const ctx = this.ctx;
-    // Head
     ctx.beginPath();
     ctx.arc(x, y - 30, 15, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Body
     ctx.beginPath();
     ctx.moveTo(x, y - 15);
     ctx.lineTo(x, y + 20);
     ctx.stroke();
-    // Arms
     ctx.beginPath();
     ctx.moveTo(x - 20, y - 5 + Math.sin(t * 4) * 10);
     ctx.lineTo(x, y - 5);
     ctx.lineTo(x + 20, y - 5 - Math.sin(t * 4) * 10);
     ctx.stroke();
-    // Legs
     ctx.beginPath();
     ctx.moveTo(x - 15, y + 40 + Math.sin(t * 3) * 5);
     ctx.lineTo(x, y + 20);
@@ -427,17 +402,14 @@ class TurboRenderer {
 
   private drawCat(x: number, y: number, t: number) {
     const ctx = this.ctx;
-    // Body
     ctx.beginPath();
     ctx.ellipse(x, y, 25, 15, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Head
     ctx.beginPath();
     ctx.arc(x + 20, y - 10, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Ears
     ctx.beginPath();
     ctx.moveTo(x + 14, y - 20);
     ctx.lineTo(x + 18, y - 30);
@@ -448,12 +420,10 @@ class TurboRenderer {
     ctx.lineTo(x + 26, y - 30);
     ctx.lineTo(x + 30, y - 20);
     ctx.fill();
-    // Tail
     ctx.beginPath();
     ctx.moveTo(x - 25, y);
     ctx.quadraticCurveTo(x - 40, y - 20 + Math.sin(t * 3) * 10, x - 35, y - 30);
     ctx.stroke();
-    // Eyes
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(x + 17, y - 12, 3, 0, Math.PI * 2);
@@ -463,18 +433,14 @@ class TurboRenderer {
 
   private drawRobot(x: number, y: number, t: number) {
     const ctx = this.ctx;
-    // Body
     ctx.fillRect(x - 20, y - 10, 40, 35);
     ctx.strokeRect(x - 20, y - 10, 40, 35);
-    // Head
     ctx.fillRect(x - 15, y - 35, 30, 25);
     ctx.strokeRect(x - 15, y - 35, 30, 25);
-    // Eyes (blinking)
     const blink = Math.sin(t * 5) > 0.9 ? 0 : 1;
     ctx.fillStyle = '#ff0000';
     ctx.fillRect(x - 8, y - 28, 6, 4 * blink);
     ctx.fillRect(x + 4, y - 28, 6, 4 * blink);
-    // Antenna
     ctx.beginPath();
     ctx.moveTo(x, y - 35);
     ctx.lineTo(x, y - 45);
@@ -483,7 +449,6 @@ class TurboRenderer {
     ctx.arc(x, y - 47, 3, 0, Math.PI * 2);
     ctx.fillStyle = this.parsed.colors[0];
     ctx.fill();
-    // Arms
     ctx.strokeStyle = this.parsed.colors[1] || '#ff00ff';
     ctx.beginPath();
     ctx.moveTo(x - 20, y);
@@ -495,12 +460,10 @@ class TurboRenderer {
 
   private drawBird(x: number, y: number, t: number) {
     const ctx = this.ctx;
-    // Body
     ctx.beginPath();
     ctx.ellipse(x, y, 15, 10, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Wings
     const wingAngle = Math.sin(t * 6) * 0.5;
     ctx.beginPath();
     ctx.moveTo(x - 5, y);
@@ -508,7 +471,6 @@ class TurboRenderer {
     ctx.moveTo(x + 5, y);
     ctx.quadraticCurveTo(x + 25, y - 20 * (1 + wingAngle), x + 35, y - 5);
     ctx.stroke();
-    // Beak
     ctx.beginPath();
     ctx.moveTo(x + 15, y - 2);
     ctx.lineTo(x + 25, y);
@@ -518,17 +480,14 @@ class TurboRenderer {
 
   private drawDragon(x: number, y: number, t: number) {
     const ctx = this.ctx;
-    // Body
     ctx.beginPath();
     ctx.ellipse(x, y, 30, 18, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Head
     ctx.beginPath();
     ctx.ellipse(x + 30, y - 10, 15, 12, 0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    // Wings
     const wingFlap = Math.sin(t * 4) * 15;
     ctx.beginPath();
     ctx.moveTo(x - 10, y - 15);
@@ -537,12 +496,10 @@ class TurboRenderer {
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    // Tail
     ctx.beginPath();
     ctx.moveTo(x - 30, y);
     ctx.quadraticCurveTo(x - 50, y + Math.sin(t * 2) * 15, x - 60, y - 10);
     ctx.stroke();
-    // Fire breath
     if (this.parsed.effects.includes('EXPLOSION')) {
       ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 0, ${0.5 + Math.random() * 0.3})`;
       ctx.beginPath();
@@ -567,7 +524,6 @@ class TurboRenderer {
         p.y = Math.random() * this.height;
       }
 
-      // Wrap around
       if (p.x < 0) p.x = this.width;
       if (p.x > this.width) p.x = 0;
       if (p.y < 0) p.y = this.height;
@@ -585,7 +541,6 @@ class TurboRenderer {
     const ctx = this.ctx;
     const t = this.frameCount / 30;
 
-    // Trails
     if (this.parsed.effects.includes('TRAIL')) {
       ctx.strokeStyle = this.parsed.colors[0] + '40';
       ctx.lineWidth = 2;
@@ -603,7 +558,6 @@ class TurboRenderer {
       }
     }
 
-    // Wave/Shockwave
     if (this.parsed.effects.includes('WAVE')) {
       const waveRadius = ((t * 50) % 200);
       ctx.strokeStyle = this.parsed.colors[0] + Math.floor((1 - waveRadius / 200) * 100).toString(16).padStart(2, '0');
@@ -613,7 +567,6 @@ class TurboRenderer {
       ctx.stroke();
     }
 
-    // Explosion bursts
     if (this.parsed.effects.includes('EXPLOSION')) {
       const burstPhase = (t * 2) % 3;
       if (burstPhase < 0.5) {
@@ -630,14 +583,12 @@ class TurboRenderer {
     const ctx = this.ctx;
     const t = this.frameCount / 30;
 
-    // Frame counter
     ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
     ctx.font = '10px monospace';
     ctx.fillText(`FRM: ${this.frameCount.toString().padStart(4, '0')}`, 10, 20);
     ctx.fillText(`SHOT: ${shot.id}/${this.shots.length}`, 10, 35);
     ctx.fillText(`CAM: ${shot.camera}`, 10, 50);
 
-    // Scan line
     const scanY = (t * 100) % this.height;
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
     ctx.lineWidth = 1;
@@ -646,24 +597,19 @@ class TurboRenderer {
     ctx.lineTo(this.width, scanY);
     ctx.stroke();
 
-    // Corner brackets
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
     ctx.lineWidth = 1;
     const m = 15;
     const s = 30;
-    // Top-left
     ctx.beginPath();
     ctx.moveTo(m, m + s); ctx.lineTo(m, m); ctx.lineTo(m + s, m);
     ctx.stroke();
-    // Top-right
     ctx.beginPath();
     ctx.moveTo(this.width - m - s, m); ctx.lineTo(this.width - m, m); ctx.lineTo(this.width - m, m + s);
     ctx.stroke();
-    // Bottom-left
     ctx.beginPath();
     ctx.moveTo(m, this.height - m - s); ctx.lineTo(m, this.height - m); ctx.lineTo(m + s, this.height - m);
     ctx.stroke();
-    // Bottom-right
     ctx.beginPath();
     ctx.moveTo(this.width - m - s, this.height - m); ctx.lineTo(this.width - m, this.height - m); ctx.lineTo(this.width - m, this.height - m - s);
     ctx.stroke();
@@ -676,7 +622,7 @@ class TurboRenderer {
     this.drawSubject(this.getCurrentShot());
     this.drawParticles();
     this.drawHUD(this.getCurrentShot());
-    this.ctx.restore(); // Restore camera transform
+    this.ctx.restore();
     this.frameCount++;
   }
 
@@ -756,7 +702,6 @@ function ControlPanel({
 }: ControlPanelProps) {
   return (
     <div className="lg:col-span-4 space-y-4">
-      {/* Prompt Input */}
       <div className="bg-gray-900/90 p-5 rounded-lg border border-gray-700 shadow-lg">
         <label className="block text-cyan-400 text-xs mb-2 font-bold uppercase tracking-widest">Input Sequence</label>
         <textarea
@@ -801,7 +746,6 @@ function ControlPanel({
         </button>
       </div>
 
-      {/* Director Overrides */}
       <div className="bg-gray-900/90 p-5 rounded-lg border border-gray-700 shadow-lg">
         <label className="block text-purple-400 text-xs mb-3 font-bold uppercase tracking-widest">Overrides</label>
         <div className="space-y-2">
@@ -881,41 +825,11 @@ interface FinalOutputProps {
 function FinalOutput({ data, visible }: FinalOutputProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Auto-play video when it becomes visible
   useEffect(() => {
     if (visible && data && videoRef.current) {
       const video = videoRef.current;
-      
-      // Force play with multiple attempts
-      const attemptPlay = async () => {
-        try {
-          video.muted = true;
-          await video.play();
-        } catch (err) {
-          console.log('Autoplay attempt failed, retrying...', err);
-          // Retry after short delay
-          setTimeout(async () => {
-            try {
-              await video.play();
-            } catch (e) {
-              console.log('Final autoplay attempt failed', e);
-            }
-          }, 100);
-        }
-      };
-
-      // Play when video is ready
-      if (video.readyState >= 2) {
-        attemptPlay();
-      } else {
-        video.addEventListener('canplay', attemptPlay, { once: true });
-        video.addEventListener('loadeddata', attemptPlay, { once: true });
-      }
-
-      return () => {
-        video.removeEventListener('canplay', attemptPlay);
-        video.removeEventListener('loadeddata', attemptPlay);
-      };
+      video.muted = true;
+      video.play().catch(() => {});
     }
   }, [visible, data]);
 
@@ -960,9 +874,6 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
           <div className="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 text-[9px] rounded text-white font-mono pointer-events-none">
             {data.duration}
           </div>
-          <div className="absolute top-1 left-1 bg-red-600/80 px-1.5 py-0.5 text-[9px] rounded text-white font-mono font-bold animate-pulse pointer-events-none">
-            ● PLAYING
-          </div>
         </div>
 
         <div className="space-y-2 text-[10px] font-mono">
@@ -986,16 +897,8 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
             <span className="text-gray-500">FORMAT</span>
             <span className="text-white">WebM (VP8/VP9)</span>
           </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">RESOLUTION</span>
-            <span className="text-white">640×360</span>
-          </div>
-          <div className="flex justify-between border-b border-gray-800 pb-1">
-            <span className="text-gray-500">FPS</span>
-            <span className="text-white">30</span>
-          </div>
           <div className="mt-2 p-2 bg-gray-800/50 rounded text-[9px] text-gray-400 italic border-l-2 border-green-500">
-            "Rendered in <span className="text-green-400 font-bold">{data.renderTime}</span> using Canvas API + MediaRecorder. Video auto-plays on completion."
+            "Rendered in <span className="text-green-400 font-bold">{data.renderTime}</span> using Canvas API + MediaRecorder."
           </div>
         </div>
       </div>
@@ -1029,10 +932,9 @@ function App() {
   ]);
 
   const [renderProgress, setRenderProgress] = useState(0);
-  const [previewFrame, setPreviewFrame] = useState<string>('');
   const [fps, setFps] = useState(0);
   const pipelineRef = useRef(false);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
   const updateStage = useCallback((id: number, updates: Partial<StageData>) => {
@@ -1049,16 +951,7 @@ function App() {
       { id: 6, title: '06. EXPORT', color: 'text-blue-400', barColor: 'blue', status: 'PENDING', detail: 'Initializing MediaRecorder...', barWidth: 0 },
     ]);
     setRenderProgress(0);
-    setPreviewFrame('');
   }, []);
-
-  const runStage = useCallback(async (num: number, task: () => Promise<void>) => {
-    updateStage(num, { status: 'PROCESSING', barWidth: 30 });
-    await new Promise(r => setTimeout(r, 50));
-    updateStage(num, { barWidth: 70 });
-    await task();
-    updateStage(num, { status: 'DONE', barWidth: 100 });
-  }, [updateStage]);
 
   const startPipeline = useCallback(async () => {
     if (!prompt.trim()) {
@@ -1066,8 +959,9 @@ function App() {
       return;
     }
     if (pipelineRef.current) return;
+    if (!canvasRef.current) return;
+    
     pipelineRef.current = true;
-
     setIsRunning(true);
     setShowOutput(false);
     setOutputData(null);
@@ -1079,8 +973,10 @@ function App() {
     setPipelineStatus('RUNNING');
 
     try {
-      // --- STAGE 1: REAL PROMPT SYNTHESIS ---
-      let parsed: ParsedPrompt;
+      // --- STAGE 1-4: Setup phases ---
+      let parsed!: ParsedPrompt;
+      let shots!: Shot[];
+
       await runStage(1, async () => {
         await new Promise(r => setTimeout(r, 200));
         parsed = analyzePrompt(prompt);
@@ -1094,8 +990,6 @@ function App() {
         updateStage(1, { detail: details });
       });
 
-      // --- STAGE 2: REAL STORYBOARD GENERATION ---
-      let shots: Shot[];
       await runStage(2, async () => {
         await new Promise(r => setTimeout(r, 200));
         shots = generateStoryboard(prompt, shotCount, parsed!);
@@ -1104,7 +998,6 @@ function App() {
         updateStage(2, { detail: `${shotCount} SHOTS | ${totalDuration}s | ${shotList}` });
       });
 
-      // --- STAGE 3: REAL DEVICE PERFORMANCE DETECTION ---
       await runStage(3, async () => {
         await new Promise(r => setTimeout(r, 300));
         const capabilities: string[] = [];
@@ -1114,11 +1007,11 @@ function App() {
         if (memory) capabilities.push(`RAM: ${memory}GB`);
         try {
           const testCanvas = document.createElement('canvas');
-          const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+          const gl = testCanvas.getContext('webgl');
           if (gl) {
-            const debugInfo = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
             if (debugInfo) {
-              const gpu = (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+              const gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
               capabilities.push(`GPU: ${gpu.substring(0, 25)}`);
             } else {
               capabilities.push('GPU: WebGL Active');
@@ -1127,13 +1020,9 @@ function App() {
         } catch {
           capabilities.push('GPU: Canvas2D');
         }
-        const conn = (navigator as any).connection;
-        if (conn) capabilities.push(`NET: ${conn.effectiveType || 'unknown'}`);
-        if (window.DeviceOrientationEvent) capabilities.push('GYRO: ✓');
         updateStage(3, { detail: capabilities.join(' | ') });
       });
 
-      // --- STAGE 4: REAL DIRECTOR AI ---
       await runStage(4, async () => {
         await new Promise(r => setTimeout(r, 200));
         const decisions: string[] = [];
@@ -1145,203 +1034,126 @@ function App() {
         const motionScale = overrideMotion ? 1.8 : 1.0;
         decisions.push(`MOTION: ${motionScale}x`);
         decisions.push(`GRADE: ${parsed!.style}`);
-        decisions.push('RATIO: 16:9');
         updateStage(4, { detail: decisions.join(' | ') });
       });
 
-      // --- STAGE 5: REAL-TIME RENDER ENGINE with LIVE PREVIEW ---
-      await runStage(5, async () => {
-        updateStage(5, { detail: 'STARTING REAL-TIME RENDER LOOP...' });
+      // --- STAGE 5 & 6: REAL-TIME RENDER + RECORD ---
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context failed');
 
-        // Create visible canvas for live rendering
-        const canvas = document.createElement('canvas');
-        canvas.width = 640;
-        canvas.height = 360;
-        canvasRef.current = canvas;
+      const renderer = new TurboRenderer(canvas, parsed!, shots!);
+      const startTime = performance.now();
+      const recordDuration = 6000; // 6 seconds
+      const targetFPS = 30;
+      const frameInterval = 1000 / targetFPS;
+      let lastFrameTime = 0;
+      let framesRendered = 0;
 
-        // Attach to live preview container
-        const liveContainer = document.getElementById('live-preview-container');
-        if (liveContainer) {
-          liveContainer.innerHTML = '';
-          canvas.style.width = '100%';
-          canvas.style.height = '100%';
-          canvas.style.objectFit = 'cover';
-          canvas.style.borderRadius = '4px';
-          liveContainer.appendChild(canvas);
-        }
+      // Start MediaRecorder
+      const stream = canvas.captureStream(targetFPS);
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
+      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
-        const renderer = new TurboRenderer(canvas, parsed!, shots!);
+      const bitrate = formatType === 'webm-hq' ? 5000000 : 2500000;
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: bitrate,
+      });
 
-        const startTime = performance.now();
-        const targetFPS = 30;
-        const frameInterval = 1000 / targetFPS;
-        let lastFrameTime = 0;
-        let framesRendered = 0;
-        const totalFrames = 180; // 6 seconds at 30fps
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
 
-        // Real-time render loop using requestAnimationFrame
-        return new Promise<void>((resolve) => {
-          const renderLoop = (timestamp: number) => {
-            const elapsed = timestamp - lastFrameTime;
+      const recordingDone = new Promise<Blob>((resolve) => {
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType });
+          resolve(blob);
+        };
+      });
 
-            if (elapsed >= frameInterval) {
-              renderer.renderFrame();
-              framesRendered++;
-              lastFrameTime = timestamp;
+      recorder.start(100);
+      updateStage(5, { detail: 'LIVE RENDER + RECORDING STARTED', barWidth: 10 });
+      updateStage(6, { detail: 'MediaRecorder active', barWidth: 10 });
 
-              // Update FPS display
-              const currentFps = Math.round(1000 / elapsed);
-              setFps(currentFps);
+      // Real-time render loop
+      await new Promise<void>((resolve) => {
+        const renderLoop = (timestamp: number) => {
+          const elapsed = timestamp - startTime;
 
-              // Update progress
-              const progress = Math.min(100, Math.round((framesRendered / totalFrames) * 100));
-              setRenderProgress(progress);
-              updateStage(5, {
-                barWidth: progress,
-                detail: `LIVE RENDER: ${framesRendered}/${totalFrames} FRAMES | ${currentFps} FPS | ${((timestamp - startTime) / 1000).toFixed(1)}s`,
-              });
+          if (elapsed >= recordDuration) {
+            resolve();
+            return;
+          }
 
-              // Update preview thumbnail every 30 frames
-              if (framesRendered % 30 === 0) {
-                setPreviewFrame(canvas.toDataURL('image/jpeg', 0.5));
-              }
+          if (timestamp - lastFrameTime >= frameInterval) {
+            renderer.renderFrame();
+            framesRendered++;
+            lastFrameTime = timestamp;
 
-              // Check if done
-              if (framesRendered >= totalFrames) {
-                const endTime = performance.now();
-                const renderTime = ((endTime - startTime) / 1000).toFixed(2);
-                setRenderProgress(100);
-                updateStage(5, {
-                  detail: `RENDER COMPLETE: ${totalFrames} FRAMES @ ${targetFPS}FPS (${renderTime}s) | 640x360`,
-                  barWidth: 100,
-                });
-                setPreviewFrame(canvas.toDataURL('image/jpeg', 0.8));
+            const currentFps = Math.round(1000 / (timestamp - lastFrameTime + 1));
+            setFps(currentFps);
 
-                // Store for export
-                (window as any).__renderer = renderer;
-                (window as any).__renderTime = renderTime;
-                (window as any).__parsed = parsed;
-                (window as any).__shots = shots;
-                (window as any).__canvas = canvas;
-
-                resolve();
-                return;
-              }
-            }
-
-            animationFrameRef.current = requestAnimationFrame(renderLoop);
-          };
+            const progress = Math.round((elapsed / recordDuration) * 100);
+            setRenderProgress(progress);
+            
+            updateStage(5, {
+              barWidth: progress,
+              detail: `RENDERING: ${framesRendered} FRAMES | ${currentFps} FPS | ${(elapsed / 1000).toFixed(1)}s/${recordDuration / 1000}s`,
+            });
+            
+            updateStage(6, {
+              barWidth: progress,
+              detail: `RECORDING: ${mimeType} | ${(elapsed / 1000).toFixed(1)}s`,
+            });
+          }
 
           animationFrameRef.current = requestAnimationFrame(renderLoop);
-        });
-      });
-
-      // --- STAGE 6: REAL VIDEO EXPORT via MediaRecorder ---
-      await runStage(6, async () => {
-        updateStage(6, { detail: 'STARTING LIVE CAPTURE + ENCODING...' });
-
-        const canvas = (window as any).__canvas as HTMLCanvasElement;
-        const renderer = (window as any).__renderer as TurboRenderer;
-        const renderTime = (window as any).__renderTime;
-        const parsedFinal = (window as any).__parsed as ParsedPrompt;
-        const shotsFinal = (window as any).__shots as Shot[];
-
-        // Capture stream from canvas at 30fps
-        const stream = canvas.captureStream(30);
-
-        // Determine supported mime type
-        let mimeType = 'video/webm;codecs=vp9';
-        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
-        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-
-        const bitrate = formatType === 'webm-hq' ? 5000000 : 2500000;
-        const recorder = new MediaRecorder(stream, {
-          mimeType,
-          videoBitsPerSecond: bitrate,
-        });
-
-        const chunks: Blob[] = [];
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data);
         };
 
-        const recordingDone = new Promise<Blob>((resolve) => {
-          recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: mimeType });
-            resolve(blob);
-          };
-        });
-
-        // Start recording
-        recorder.start(100); // Collect data every 100ms
-
-        // Continue rendering in real-time while recording (6 seconds)
-        const recordDuration = 6000;
-        const recordStart = performance.now();
-        const targetFPS = 30;
-        const frameInterval = 1000 / targetFPS;
-        let lastFrame = 0;
-        let recordedFrames = 0;
-
-        await new Promise<void>((resolve) => {
-          const recordLoop = (timestamp: number) => {
-            const elapsed = timestamp - recordStart;
-
-            if (elapsed >= recordDuration) {
-              resolve();
-              return;
-            }
-
-            if (timestamp - lastFrame >= frameInterval) {
-              renderer.renderFrame();
-              recordedFrames++;
-              lastFrame = timestamp;
-
-              const progress = Math.round((elapsed / recordDuration) * 100);
-              updateStage(6, {
-                barWidth: progress,
-                detail: `RECORDING: ${recordedFrames} FRAMES | ${(elapsed / 1000).toFixed(1)}s/${recordDuration / 1000}s | ${mimeType}`,
-              });
-            }
-
-            requestAnimationFrame(recordLoop);
-          };
-          requestAnimationFrame(recordLoop);
-        });
-
-        // Stop recording
-        recorder.stop();
-        stream.getTracks().forEach(track => track.stop());
-
-        const videoBlob = await recordingDone;
-        const videoUrl = URL.createObjectURL(videoBlob);
-        const sizeMB = (videoBlob.size / (1024 * 1024)).toFixed(2);
-
-        const totalDuration = shotsFinal.reduce((sum: number, s: Shot) => sum + s.duration, 0).toFixed(2);
-        const finalId = `CKT_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${Math.floor(Math.random() * 9000) + 1000}`;
-
-        setOutputData({
-          id: finalId,
-          duration: totalDuration + 's',
-          style: parsedFinal.style,
-          size: `${sizeMB} MB`,
-          renderTime: renderTime + 's',
-          videoUrl,
-          thumbnailUrl: previewFrame,
-        });
-
-        updateStage(6, {
-          detail: `EXPORTED: ${mimeType} | ${sizeMB}MB | ${recordedFrames} FRAMES | READY TO PLAY`,
-          barWidth: 100,
-        });
-
-        setShowOutput(true);
-        setLiveMode(false);
+        animationFrameRef.current = requestAnimationFrame(renderLoop);
       });
 
+      // Stop recording
+      recorder.stop();
+      stream.getTracks().forEach(track => track.stop());
+
+      const videoBlob = await recordingDone;
+      const videoUrl = URL.createObjectURL(videoBlob);
+      const sizeMB = (videoBlob.size / (1024 * 1024)).toFixed(2);
+      const renderTime = ((performance.now() - startTime) / 1000).toFixed(2);
+
+      const totalDuration = shots.reduce((sum, s) => sum + s.duration, 0).toFixed(2);
+      const finalId = `CKT_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${Math.floor(Math.random() * 9000) + 1000}`;
+
+      setOutputData({
+        id: finalId,
+        duration: totalDuration + 's',
+        style: parsed.style,
+        size: `${sizeMB} MB`,
+        renderTime: renderTime + 's',
+        videoUrl,
+        thumbnailUrl: '',
+      });
+
+      updateStage(5, {
+        detail: `COMPLETE: ${framesRendered} FRAMES @ ${targetFPS}FPS | ${renderTime}s`,
+        barWidth: 100,
+      });
+      
+      updateStage(6, {
+        detail: `EXPORTED: ${mimeType} | ${sizeMB}MB | ${framesRendered} FRAMES`,
+        barWidth: 100,
+      });
+
+      setShowOutput(true);
+      setLiveMode(false);
       setStatusText('PIPELINE FINISHED — VIDEO READY');
       setStatusColor('bg-green-500');
       setPipelineStatus('COMPLETED');
+
     } catch (e) {
       console.error('Pipeline error:', e);
       setStatusText('ERROR: ' + (e as Error).message);
@@ -1354,7 +1166,15 @@ function App() {
       setIsRunning(false);
       pipelineRef.current = false;
     }
-  }, [prompt, shotCount, formatType, overrideFx, overrideMotion, resetStages, runStage, updateStage]);
+  }, [prompt, shotCount, formatType, overrideFx, overrideMotion, resetStages, updateStage]);
+
+  const runStage = useCallback(async (num: number, task: () => Promise<void>) => {
+    updateStage(num, { status: 'PROCESSING', barWidth: 30 });
+    await new Promise(r => setTimeout(r, 50));
+    updateStage(num, { barWidth: 70 });
+    await task();
+    updateStage(num, { status: 'DONE', barWidth: 100 });
+  }, [updateStage]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -1379,6 +1199,33 @@ function App() {
         />
 
         <div className="lg:col-span-8 space-y-3">
+          {/* Live Canvas Preview - ALWAYS in DOM */}
+          <div className={`bg-black/80 border rounded-lg p-3 transition-all ${liveMode ? 'border-cyan-500/50 shadow-[0_0_20px_rgba(0,255,255,0.2)]' : 'border-gray-700'}`}>
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center gap-2">
+                {liveMode && <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>}
+                <span className={`text-xs font-bold uppercase ${liveMode ? 'text-red-400' : 'text-gray-500'}`}>
+                  {liveMode ? 'LIVE RENDER' : 'RENDER CANVAS'}
+                </span>
+              </div>
+              {liveMode && <div className="text-[10px] text-cyan-400 font-mono">{fps} FPS</div>}
+            </div>
+            <div className="aspect-video bg-black rounded overflow-hidden border border-gray-700 relative">
+              <canvas
+                ref={canvasRef}
+                width={640}
+                height={360}
+                className="w-full h-full"
+                style={{ imageRendering: 'auto' }}
+              />
+              {!liveMode && !showOutput && (
+                <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-xs">
+                  Canvas ready — Click "Initiate Render" to start
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Status Bar */}
           <div className="bg-black/60 p-3 rounded border border-gray-800 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -1389,22 +1236,6 @@ function App() {
               ENGINE STATUS: <span className="text-cyan-500">{pipelineStatus}</span>
             </div>
           </div>
-
-          {/* Live Preview */}
-          {liveMode && (
-            <div className="bg-black/80 border border-cyan-500/50 rounded-lg p-3 shadow-[0_0_20px_rgba(0,255,255,0.2)]">
-              <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                  <span className="text-xs font-bold text-red-400 uppercase">LIVE RENDER</span>
-                </div>
-                <div className="text-[10px] text-cyan-400 font-mono">{fps} FPS</div>
-              </div>
-              <div id="live-preview-container" className="aspect-video bg-black rounded overflow-hidden border border-gray-700">
-                {/* Canvas will be injected here */}
-              </div>
-            </div>
-          )}
 
           {/* Pipeline Stages */}
           <div className="space-y-2">
@@ -1428,11 +1259,6 @@ function App() {
                     </div>
                     {stage.detail && (
                       <div className="text-[10px] text-gray-500 mt-1">{stage.detail}</div>
-                    )}
-                    {!liveMode && previewFrame && (
-                      <div className="mt-2 rounded overflow-hidden border border-gray-700">
-                        <img src={previewFrame} alt="Render preview" className="w-full h-20 object-cover opacity-70" />
-                      </div>
                     )}
                   </>
                 ) : (
