@@ -173,15 +173,80 @@ function generateStoryboard(prompt: string, shotCount: number, parsed: ParsedPro
 }
 
 // --- Real Canvas Renderer ---
+// --- Cartoon Easing Functions ---
+function easeOutBounce(x: number): number {
+  const n1 = 7.5625;
+  const d1 = 2.75;
+  if (x < 1 / d1) return n1 * x * x;
+  else if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + 0.75;
+  else if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + 0.9375;
+  else return n1 * (x -= 2.625 / d1) * x + 0.984375;
+}
+
+function easeOutElastic(x: number): number {
+  const c4 = (2 * Math.PI) / 3;
+  return x === 0 ? 0 : x === 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * c4) + 1;
+}
+
+function easeInOutQuad(x: number): number {
+  return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+}
+
+// --- Cartoon Color Palettes ---
+const CARTOON_PALETTES: Record<string, { bg: string; ground: string; accent: string[] }> = {
+  CYBERPUNK: { bg: '#1a0a2e', ground: '#0f0520', accent: ['#ff00ff', '#00ffff', '#ffff00', '#ff0088'] },
+  'PIXEL ART': { bg: '#87CEEB', ground: '#4a7c3a', accent: ['#ff0000', '#00ff00', '#0000ff', '#ffff00'] },
+  VAPORWAVE: { bg: '#ff71ce', ground: '#01cdfe', accent: ['#05ffa1', '#b967ff', '#fffb96', '#ff00ff'] },
+  CARTOON: { bg: '#87CEEB', ground: '#7EC850', accent: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3'] },
+  REALISTIC: { bg: '#4A90E2', ground: '#5D8C3E', accent: ['#F39C12', '#E74C3C', '#27AE60', '#8E44AD'] },
+  ABSTRACT: { bg: '#2C3E50', ground: '#1A252F', accent: ['#E74C3C', '#F39C12', '#1ABC9C', '#9B59B6'] },
+  NOIR: { bg: '#1a1a1a', ground: '#0a0a0a', accent: ['#ffffff', '#cccccc', '#888888', '#444444'] },
+  NEON: { bg: '#0a0020', ground: '#050010', accent: ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'] },
+};
+
+// --- Cartoon Sparkle Effect ---
+interface Sparkle {
+  x: number;
+  y: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  rotation: number;
+}
+
+// --- Cartoon Comic Text Effect ---
+interface ComicText {
+  text: string;
+  x: number;
+  y: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  scale: number;
+}
+
 class TurboRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private particles: Particle[] = [];
+  private sparkles: Sparkle[] = [];
+  private comicTexts: ComicText[] = [];
   private frameCount = 0;
   private parsed: ParsedPrompt;
   private shots: Shot[];
   private width: number;
   private height: number;
+  private palette: { bg: string; ground: string; accent: string[] };
+  private characterX = 0;
+  private characterY = 0;
+  private characterScaleX = 1;
+  private characterScaleY = 1;
+  private characterRotation = 0;
+  private bouncePhase = 0;
+  private eyeBlink = 0;
+  private tailWag = 0;
+  private earFlop = 0;
 
   constructor(canvas: HTMLCanvasElement, parsed: ParsedPrompt, shots: Shot[]) {
     this.canvas = canvas;
@@ -190,21 +255,24 @@ class TurboRenderer {
     this.shots = shots;
     this.width = canvas.width;
     this.height = canvas.height;
+    this.palette = CARTOON_PALETTES[parsed.style] || CARTOON_PALETTES.NEON;
+    this.characterX = this.width / 2;
+    this.characterY = this.height * 0.65;
     this.initParticles();
   }
 
   private initParticles() {
-    const count = this.parsed.effects.includes('PARTICLES') ? 80 : 40;
+    const count = this.parsed.effects.includes('PARTICLES') ? 60 : 30;
     for (let i = 0; i < count; i++) {
       this.particles.push({
         x: Math.random() * this.width,
         y: Math.random() * this.height,
-        vx: (Math.random() - 0.5) * 3,
-        vy: (Math.random() - 0.5) * 3,
-        size: Math.random() * 4 + 1,
-        color: this.parsed.colors[Math.floor(Math.random() * this.parsed.colors.length)],
+        vx: (Math.random() - 0.5) * 2,
+        vy: -Math.random() * 2 - 1,
+        size: Math.random() * 6 + 2,
+        color: this.palette.accent[Math.floor(Math.random() * this.palette.accent.length)],
         life: Math.random(),
-        maxLife: 0.5 + Math.random() * 0.5,
+        maxLife: 1 + Math.random(),
       });
     }
   }
@@ -220,320 +288,888 @@ class TurboRenderer {
     return this.shots[this.shots.length - 1];
   }
 
+  // --- CARTOON DRAWING HELPERS ---
+  
+  private drawCartoonOutline(drawFn: () => void, lineWidth: number = 4) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = '#000000';
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    drawFn();
+    ctx.stroke();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  private drawCartoonEye(x: number, y: number, size: number, lookX: number = 0, lookY: number = 0) {
+    const ctx = this.ctx;
+    // White of eye
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(x, y, size, size * 1.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Pupil
+    const pupilX = x + lookX * size * 0.3;
+    const pupilY = y + lookY * size * 0.3;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(pupilX, pupilY, size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Highlight
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(pupilX - size * 0.2, pupilY - size * 0.2, size * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private drawCartoonSparkle(x: number, y: number, size: number, color: string) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    
+    // 4-point star
+    ctx.beginPath();
+    ctx.moveTo(0, -size);
+    ctx.lineTo(size * 0.3, -size * 0.3);
+    ctx.lineTo(size, 0);
+    ctx.lineTo(size * 0.3, size * 0.3);
+    ctx.lineTo(0, size);
+    ctx.lineTo(-size * 0.3, size * 0.3);
+    ctx.lineTo(-size, 0);
+    ctx.lineTo(-size * 0.3, -size * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private drawComicText(text: string, x: number, y: number, color: string, scale: number) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    
+    // Background burst
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    const points = 12;
+    for (let i = 0; i < points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      const radius = i % 2 === 0 ? 50 : 35;
+      const px = Math.cos(angle) * radius;
+      const py = Math.sin(angle) * radius;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Text
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeText(text, 0, 0);
+    ctx.fillText(text, 0, 0);
+    
+    ctx.restore();
+  }
+
+  private drawSpeedLines(x: number, y: number, direction: number, count: number = 5) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    
+    for (let i = 0; i < count; i++) {
+      const offset = (i - count / 2) * 8;
+      const length = 20 + Math.random() * 15;
+      ctx.beginPath();
+      ctx.moveTo(x - direction * 30, y + offset);
+      ctx.lineTo(x - direction * (30 + length), y + offset);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  private drawHalftone(x: number, y: number, width: number, height: number, color: string, density: number = 0.3) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.fillStyle = color;
+    const dotSize = 3;
+    const spacing = 8;
+    
+    for (let px = x; px < x + width; px += spacing) {
+      for (let py = y; py < y + height; py += spacing) {
+        if (Math.random() < density) {
+          ctx.beginPath();
+          ctx.arc(px, py, dotSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  // --- CARTOON CAMERA & ANIMATION ---
+  
+  private updateAnimation(shot: Shot) {
+    const t = this.frameCount / 30;
+    const subject = this.parsed.subjects[0] || 'character';
+    
+    // Base position
+    let targetX = this.width / 2;
+    let targetY = this.height * 0.65;
+    
+    // Action-based movement with cartoon easing
+    switch (shot.action) {
+      case 'ENTER':
+        const enterProgress = Math.min(1, t * 0.8);
+        targetX = this.width * (1 - easeOutElastic(enterProgress)) * 0.8 + this.width * 0.2;
+        break;
+      case 'ACTION':
+        // Bouncy jump
+        const jumpCycle = (t * 2) % 2;
+        const jumpHeight = jumpCycle < 1 ? easeOutBounce(jumpCycle) : easeOutBounce(2 - jumpCycle);
+        targetY = this.height * 0.65 - jumpHeight * 80;
+        targetX = this.width / 2 + Math.sin(t * 3) * 40;
+        
+        // Squash and stretch
+        if (jumpCycle < 0.2) {
+          this.characterScaleX = 1.3;
+          this.characterScaleY = 0.7;
+        } else if (jumpCycle > 0.8 && jumpCycle < 1) {
+          this.characterScaleX = 0.8;
+          this.characterScaleY = 1.2;
+        } else {
+          this.characterScaleX = 1;
+          this.characterScaleY = 1;
+        }
+        break;
+      case 'PEAK':
+        targetY = this.height * 0.65 - Math.abs(Math.sin(t * 2)) * 60;
+        break;
+      case 'TRANSITION':
+        targetX = this.width / 2 + Math.sin(t * 0.5) * 100;
+        break;
+      case 'EXIT':
+        const exitProgress = Math.min(1, t * 0.6);
+        targetX = this.width / 2 + easeInOutQuad(exitProgress) * this.width * 0.6;
+        break;
+    }
+    
+    // Smooth interpolation
+    this.characterX += (targetX - this.characterX) * 0.1;
+    this.characterY += (targetY - this.characterY) * 0.1;
+    
+    // Secondary motion
+    this.bouncePhase = t * 4;
+    this.eyeBlink = Math.sin(t * 5) > 0.95 ? 1 : 0;
+    this.tailWag = Math.sin(t * 6) * 0.3;
+    this.earFlop = Math.sin(t * 4) * 0.2;
+    
+    // Rotation based on movement
+    const dx = targetX - this.characterX;
+    this.characterRotation = dx * 0.002;
+  }
+
   private applyCameraTransform(shot: Shot) {
     const ctx = this.ctx;
     const t = this.frameCount / 30;
 
     ctx.save();
 
+    // Subtle cartoon camera movements
     switch (shot.camera) {
       case 'PAN_LEFT':
-        ctx.translate(-Math.sin(t * 0.5) * 20, 0);
+        ctx.translate(-Math.sin(t * 0.3) * 15, 0);
         break;
       case 'PAN_RIGHT':
-        ctx.translate(Math.sin(t * 0.5) * 20, 0);
+        ctx.translate(Math.sin(t * 0.3) * 15, 0);
         break;
       case 'ZOOM_IN':
-        const zoomIn = 1 + Math.sin(t * 0.3) * 0.1;
+        const zoomIn = 1 + Math.sin(t * 0.2) * 0.08;
         ctx.translate(this.width / 2, this.height / 2);
         ctx.scale(zoomIn, zoomIn);
         ctx.translate(-this.width / 2, -this.height / 2);
         break;
       case 'ZOOM_OUT':
-        const zoomOut = 1 - Math.sin(t * 0.3) * 0.05;
+        const zoomOut = 1 - Math.sin(t * 0.2) * 0.05;
         ctx.translate(this.width / 2, this.height / 2);
         ctx.scale(zoomOut, zoomOut);
         ctx.translate(-this.width / 2, -this.height / 2);
         break;
       case 'DOLLY':
-        ctx.translate(Math.sin(t * 0.2) * 10, Math.cos(t * 0.2) * 10);
+        ctx.translate(Math.sin(t * 0.15) * 8, Math.cos(t * 0.15) * 8);
         break;
       case 'ORBIT':
         ctx.translate(this.width / 2, this.height / 2);
-        ctx.rotate(Math.sin(t * 0.1) * 0.05);
+        ctx.rotate(Math.sin(t * 0.08) * 0.03);
         ctx.translate(-this.width / 2, -this.height / 2);
         break;
     }
   }
 
+  // --- CARTOON BACKGROUNDS ---
+  
   private drawBackground() {
     const ctx = this.ctx;
     const t = this.frameCount / 60;
 
-    const gradient = ctx.createLinearGradient(0, 0, this.width, this.height);
-
-    switch (this.parsed.environment) {
-      case 'CITY':
-        gradient.addColorStop(0, `hsl(${260 + Math.sin(t) * 10}, 80%, 5%)`);
-        gradient.addColorStop(0.5, `hsl(${280 + Math.sin(t * 0.5) * 20}, 60%, 10%)`);
-        gradient.addColorStop(1, `hsl(${200 + Math.cos(t) * 15}, 70%, 8%)`);
-        break;
-      case 'SPACE':
-        gradient.addColorStop(0, '#000011');
-        gradient.addColorStop(0.5, '#0a0020');
-        gradient.addColorStop(1, '#000008');
-        break;
-      case 'FOREST':
-        gradient.addColorStop(0, `hsl(${140 + Math.sin(t) * 10}, 40%, 5%)`);
-        gradient.addColorStop(1, `hsl(${160 + Math.cos(t) * 10}, 30%, 10%)`);
-        break;
-      case 'OCEAN':
-        gradient.addColorStop(0, `hsl(${200 + Math.sin(t) * 10}, 70%, 8%)`);
-        gradient.addColorStop(1, `hsl(${220 + Math.cos(t) * 10}, 60%, 15%)`);
-        break;
-      default:
-        gradient.addColorStop(0, '#050510');
-        gradient.addColorStop(0.5, '#0a0a20');
-        gradient.addColorStop(1, '#050515');
-    }
-
-    ctx.fillStyle = gradient;
+    // Flat cartoon sky
+    ctx.fillStyle = this.palette.bg;
     ctx.fillRect(0, 0, this.width, this.height);
 
-    if (this.parsed.environment === 'CITY' || this.parsed.style === 'CYBERPUNK') {
-      ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
-      ctx.lineWidth = 0.5;
-      const gridSize = 40;
-      const offset = (t * 20) % gridSize;
-
-      for (let x = -gridSize + offset; x < this.width + gridSize; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, this.height);
-        ctx.stroke();
-      }
-      for (let y = -gridSize + offset; y < this.height + gridSize; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(this.width, y);
-        ctx.stroke();
-      }
-    }
-
-    if (this.parsed.environment === 'SPACE') {
-      for (let i = 0; i < 50; i++) {
-        const sx = (Math.sin(i * 123.456) * 0.5 + 0.5) * this.width;
-        const sy = (Math.cos(i * 789.012) * 0.5 + 0.5) * this.height;
-        const brightness = Math.sin(t * 2 + i) * 0.5 + 0.5;
-        ctx.fillStyle = `rgba(255, 255, 255, ${brightness * 0.8})`;
-        ctx.fillRect(sx, sy, 1.5, 1.5);
-      }
+    // Environment-specific backgrounds
+    switch (this.parsed.environment) {
+      case 'CITY':
+        this.drawCartoonCity(t);
+        break;
+      case 'SPACE':
+        this.drawCartoonSpace(t);
+        break;
+      case 'FOREST':
+        this.drawCartoonForest(t);
+        break;
+      case 'OCEAN':
+        this.drawCartoonOcean(t);
+        break;
+      default:
+        this.drawCartoonDefault(t);
     }
   }
 
+  private drawCartoonCity(t: number) {
+    const ctx = this.ctx;
+    
+    // Ground
+    ctx.fillStyle = this.palette.ground;
+    ctx.fillRect(0, this.height * 0.75, this.width, this.height * 0.25);
+    
+    // Buildings (simple geometric shapes)
+    const buildingColors = ['#2C3E50', '#34495E', '#1A252F', '#273746'];
+    for (let i = 0; i < 8; i++) {
+      const x = i * 80 + 20;
+      const height = 100 + Math.sin(i * 2.5) * 40;
+      const y = this.height * 0.75 - height;
+      
+      ctx.fillStyle = buildingColors[i % buildingColors.length];
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.fillRect(x, y, 60, height);
+      ctx.strokeRect(x, y, 60, height);
+      
+      // Windows
+      ctx.fillStyle = this.palette.accent[i % this.palette.accent.length];
+      for (let wy = y + 15; wy < y + height - 20; wy += 25) {
+        for (let wx = x + 10; wx < x + 50; wx += 20) {
+          ctx.fillRect(wx, wy, 10, 12);
+        }
+      }
+    }
+    
+    // Neon signs
+    if (this.parsed.style === 'CYBERPUNK' || this.parsed.style === 'NEON') {
+      ctx.fillStyle = this.palette.accent[0];
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.fillRect(150, this.height * 0.5, 80, 30);
+      ctx.strokeRect(150, this.height * 0.5, 80, 30);
+    }
+  }
+
+  private drawCartoonSpace(t: number) {
+    const ctx = this.ctx;
+    
+    // Stars
+    for (let i = 0; i < 80; i++) {
+      const sx = (Math.sin(i * 123.456) * 0.5 + 0.5) * this.width;
+      const sy = (Math.cos(i * 789.012) * 0.5 + 0.5) * this.height * 0.7;
+      const twinkle = Math.sin(t * 3 + i) * 0.5 + 0.5;
+      
+      ctx.fillStyle = `rgba(255, 255, 255, ${twinkle})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2 + twinkle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Planet
+    const planetX = this.width * 0.8;
+    const planetY = this.height * 0.3;
+    ctx.fillStyle = '#FF6B6B';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(planetX, planetY, 50, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Planet ring
+    ctx.strokeStyle = '#FFE66D';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(planetX, planetY, 70, 20, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  private drawCartoonForest(t: number) {
+    const ctx = this.ctx;
+    
+    // Ground
+    ctx.fillStyle = '#7EC850';
+    ctx.fillRect(0, this.height * 0.7, this.width, this.height * 0.3);
+    
+    // Trees
+    for (let i = 0; i < 6; i++) {
+      const x = i * 110 + 50;
+      const y = this.height * 0.7;
+      
+      // Trunk
+      ctx.fillStyle = '#8B4513';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.fillRect(x - 8, y - 60, 16, 60);
+      ctx.strokeRect(x - 8, y - 60, 16, 60);
+      
+      // Foliage (circle)
+      ctx.fillStyle = '#228B22';
+      ctx.beginPath();
+      ctx.arc(x, y - 80, 35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+    
+    // Flowers
+    for (let i = 0; i < 10; i++) {
+      const fx = (Math.sin(i * 45.67) * 0.5 + 0.5) * this.width;
+      const fy = this.height * 0.75 + (Math.cos(i * 89.01) * 0.5 + 0.5) * 40;
+      
+      ctx.fillStyle = this.palette.accent[i % this.palette.accent.length];
+      ctx.beginPath();
+      ctx.arc(fx, fy, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  private drawCartoonOcean(t: number) {
+    const ctx = this.ctx;
+    
+    // Water
+    ctx.fillStyle = '#4A90E2';
+    ctx.fillRect(0, this.height * 0.6, this.width, this.height * 0.4);
+    
+    // Waves
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 5; i++) {
+      const waveY = this.height * 0.65 + i * 30;
+      ctx.beginPath();
+      for (let x = 0; x < this.width; x += 5) {
+        const y = waveY + Math.sin((x + t * 50) * 0.05) * 8;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    
+    // Sun
+    ctx.fillStyle = '#FFE66D';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(this.width * 0.8, this.height * 0.2, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  private drawCartoonDefault(t: number) {
+    const ctx = this.ctx;
+    
+    // Ground
+    ctx.fillStyle = this.palette.ground;
+    ctx.fillRect(0, this.height * 0.75, this.width, this.height * 0.25);
+    
+    // Simple clouds
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const cx = (i * 200 + t * 20) % (this.width + 100) - 50;
+      const cy = 80 + i * 30;
+      
+      ctx.beginPath();
+      ctx.arc(cx, cy, 25, 0, Math.PI * 2);
+      ctx.arc(cx + 25, cy, 30, 0, Math.PI * 2);
+      ctx.arc(cx + 50, cy, 25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  // --- CARTOON CHARACTERS ---
+  
   private drawSubject(shot: Shot) {
     const ctx = this.ctx;
-    const t = this.frameCount / 30;
-    const cx = this.width / 2;
-    const cy = this.height / 2;
-
     const subject = this.parsed.subjects[0] || 'character';
 
+    this.updateAnimation(shot);
+
     ctx.save();
+    ctx.translate(this.characterX, this.characterY);
+    ctx.rotate(this.characterRotation);
+    ctx.scale(this.characterScaleX, this.characterScaleY);
 
-    let offsetX = 0, offsetY = 0;
-    switch (shot.action) {
-      case 'ENTER':
-        offsetX = Math.max(0, (1 - t * 0.5)) * -200;
-        break;
-      case 'ACTION':
-        offsetX = Math.sin(t * 3) * 30;
-        offsetY = Math.abs(Math.sin(t * 4)) * -40;
-        break;
-      case 'PEAK':
-        offsetY = Math.sin(t * 2) * -20;
-        break;
-      case 'TRANSITION':
-        offsetX = Math.sin(t * 0.5) * 50;
-        break;
-      case 'EXIT':
-        offsetX = Math.min(200, t * 30);
-        break;
-    }
+    // Draw shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, 50, 30, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    const sx = cx + offsetX;
-    const sy = cy + offsetY;
-
-    if (this.parsed.effects.includes('GLOW') || this.parsed.style === 'NEON' || this.parsed.style === 'CYBERPUNK') {
-      ctx.shadowColor = this.parsed.colors[0] || '#00ffff';
-      ctx.shadowBlur = 20 + Math.sin(t * 3) * 10;
-    }
-
-    ctx.fillStyle = this.parsed.colors[0] || '#00ffff';
-    ctx.strokeStyle = this.parsed.colors[1] || '#ff00ff';
-    ctx.lineWidth = 2;
-
+    // Draw character based on subject
     if (subject.includes('cat')) {
-      this.drawCat(sx, sy, t);
+      this.drawCartoonCat(0, 0);
     } else if (subject.includes('robot')) {
-      this.drawRobot(sx, sy, t);
+      this.drawCartoonRobot(0, 0);
     } else if (subject.includes('bird')) {
-      this.drawBird(sx, sy, t);
+      this.drawCartoonBird(0, 0);
     } else if (subject.includes('dragon')) {
-      this.drawDragon(sx, sy, t);
+      this.drawCartoonDragon(0, 0);
     } else {
-      this.drawCharacter(sx, sy, t);
+      this.drawCartoonCharacter(0, 0);
     }
 
     ctx.restore();
   }
 
-  private drawCharacter(x: number, y: number, t: number) {
+  private drawCartoonCharacter(x: number, y: number) {
     const ctx = this.ctx;
+    const color = this.palette.accent[0];
+    
+    // Body (chibi proportions - big head, small body)
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    
+    // Body
     ctx.beginPath();
-    ctx.arc(x, y - 30, 15, 0, Math.PI * 2);
+    ctx.ellipse(x, y + 20, 20, 25, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    
+    // Head (big!)
     ctx.beginPath();
-    ctx.moveTo(x, y - 15);
-    ctx.lineTo(x, y + 20);
+    ctx.arc(x, y - 25, 30, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
+    
+    // Eyes
+    if (this.eyeBlink === 0) {
+      this.drawCartoonEye(x - 10, y - 30, 8, 0, 0);
+      this.drawCartoonEye(x + 10, y - 30, 8, 0, 0);
+    } else {
+      // Closed eyes
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x - 15, y - 30);
+      ctx.lineTo(x - 5, y - 30);
+      ctx.moveTo(x + 5, y - 30);
+      ctx.lineTo(x + 15, y - 30);
+      ctx.stroke();
+    }
+    
+    // Mouth (smile)
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(x - 20, y - 5 + Math.sin(t * 4) * 10);
+    ctx.arc(x, y - 15, 8, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    
+    // Arms
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y + 10);
+    ctx.lineTo(x - 35, y + 20 + Math.sin(this.bouncePhase) * 5);
+    ctx.moveTo(x + 20, y + 10);
+    ctx.lineTo(x + 35, y + 20 - Math.sin(this.bouncePhase) * 5);
+    ctx.stroke();
+    
+    // Legs
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y + 40);
+    ctx.lineTo(x - 10, y + 55);
+    ctx.moveTo(x + 10, y + 40);
+    ctx.lineTo(x + 10, y + 55);
+    ctx.stroke();
+  }
+
+  private drawCartoonCat(x: number, y: number) {
+    const ctx = this.ctx;
+    const color = this.palette.accent[0];
+    
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(x, y + 10, 25, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Head
+    ctx.beginPath();
+    ctx.arc(x + 20, y - 15, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Ears
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y - 30);
+    ctx.lineTo(x + 15, y - 45 + this.earFlop * 10);
+    ctx.lineTo(x + 20, y - 30);
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(x + 25, y - 30);
+    ctx.lineTo(x + 30, y - 45 + this.earFlop * 10);
+    ctx.lineTo(x + 35, y - 30);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Eyes
+    if (this.eyeBlink === 0) {
+      this.drawCartoonEye(x + 15, y - 18, 6, 0, 0);
+      this.drawCartoonEye(x + 28, y - 18, 6, 0, 0);
+    }
+    
+    // Nose
+    ctx.fillStyle = '#FF69B4';
+    ctx.beginPath();
+    ctx.arc(x + 22, y - 10, 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Whiskers
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y - 10);
+    ctx.lineTo(x, y - 8);
+    ctx.moveTo(x + 10, y - 8);
     ctx.lineTo(x, y - 5);
-    ctx.lineTo(x + 20, y - 5 - Math.sin(t * 4) * 10);
+    ctx.moveTo(x + 35, y - 10);
+    ctx.lineTo(x + 45, y - 8);
+    ctx.moveTo(x + 35, y - 8);
+    ctx.lineTo(x + 45, y - 5);
     ctx.stroke();
+    
+    // Tail
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.moveTo(x - 15, y + 40 + Math.sin(t * 3) * 5);
-    ctx.lineTo(x, y + 20);
-    ctx.lineTo(x + 15, y + 40 - Math.sin(t * 3) * 5);
+    ctx.moveTo(x - 25, y + 10);
+    ctx.quadraticCurveTo(x - 40, y - 10 + this.tailWag * 20, x - 35, y - 25);
     ctx.stroke();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Legs
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.fillRect(x - 15, y + 25, 8, 15);
+    ctx.strokeRect(x - 15, y + 25, 8, 15);
+    ctx.fillRect(x + 10, y + 25, 8, 15);
+    ctx.strokeRect(x + 10, y + 25, 8, 15);
   }
 
-  private drawCat(x: number, y: number, t: number) {
+  private drawCartoonRobot(x: number, y: number) {
     const ctx = this.ctx;
+    const color = this.palette.accent[0];
+    
+    ctx.fillStyle = '#C0C0C0';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    
+    // Body
+    ctx.fillRect(x - 25, y - 5, 50, 45);
+    ctx.strokeRect(x - 25, y - 5, 50, 45);
+    
+    // Head
+    ctx.fillRect(x - 20, y - 40, 40, 35);
+    ctx.strokeRect(x - 20, y - 40, 40, 35);
+    
+    // Eyes (LED style)
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 12, y - 30, 8, 8);
+    ctx.fillRect(x + 4, y - 30, 8, 8);
+    
+    // Antenna
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(x, y, 25, 15, 0, 0, Math.PI * 2);
+    ctx.moveTo(x, y - 40);
+    ctx.lineTo(x, y - 55);
+    ctx.stroke();
+    
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y - 58, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    
+    // Arms
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(x + 20, y - 10, 12, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(x - 25, y + 5);
+    ctx.lineTo(x - 40, y + 15 + Math.sin(this.bouncePhase) * 5);
+    ctx.moveTo(x + 25, y + 5);
+    ctx.lineTo(x + 40, y + 15 - Math.sin(this.bouncePhase) * 5);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + 14, y - 20);
-    ctx.lineTo(x + 18, y - 30);
-    ctx.lineTo(x + 22, y - 20);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(x + 22, y - 20);
-    ctx.lineTo(x + 26, y - 30);
-    ctx.lineTo(x + 30, y - 20);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(x - 25, y);
-    ctx.quadraticCurveTo(x - 40, y - 20 + Math.sin(t * 3) * 10, x - 35, y - 30);
-    ctx.stroke();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(x + 17, y - 12, 3, 0, Math.PI * 2);
-    ctx.arc(x + 25, y - 12, 3, 0, Math.PI * 2);
-    ctx.fill();
+    
+    // Legs
+    ctx.fillRect(x - 15, y + 40, 10, 20);
+    ctx.strokeRect(x - 15, y + 40, 10, 20);
+    ctx.fillRect(x + 5, y + 40, 10, 20);
+    ctx.strokeRect(x + 5, y + 40, 10, 20);
   }
 
-  private drawRobot(x: number, y: number, t: number) {
+  private drawCartoonBird(x: number, y: number) {
     const ctx = this.ctx;
-    ctx.fillRect(x - 20, y - 10, 40, 35);
-    ctx.strokeRect(x - 20, y - 10, 40, 35);
-    ctx.fillRect(x - 15, y - 35, 30, 25);
-    ctx.strokeRect(x - 15, y - 35, 30, 25);
-    const blink = Math.sin(t * 5) > 0.9 ? 0 : 1;
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(x - 8, y - 28, 6, 4 * blink);
-    ctx.fillRect(x + 4, y - 28, 6, 4 * blink);
+    const color = this.palette.accent[0];
+    
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    
+    // Body
     ctx.beginPath();
-    ctx.moveTo(x, y - 35);
-    ctx.lineTo(x, y - 45);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x, y - 47, 3, 0, Math.PI * 2);
-    ctx.fillStyle = this.parsed.colors[0];
-    ctx.fill();
-    ctx.strokeStyle = this.parsed.colors[1] || '#ff00ff';
-    ctx.beginPath();
-    ctx.moveTo(x - 20, y);
-    ctx.lineTo(x - 35, y + 10 + Math.sin(t * 2) * 5);
-    ctx.moveTo(x + 20, y);
-    ctx.lineTo(x + 35, y + 10 - Math.sin(t * 2) * 5);
-    ctx.stroke();
-  }
-
-  private drawBird(x: number, y: number, t: number) {
-    const ctx = this.ctx;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 15, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 20, 18, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    const wingAngle = Math.sin(t * 6) * 0.5;
+    
+    // Head
     ctx.beginPath();
-    ctx.moveTo(x - 5, y);
-    ctx.quadraticCurveTo(x - 25, y - 20 * (1 + wingAngle), x - 35, y - 5);
-    ctx.moveTo(x + 5, y);
-    ctx.quadraticCurveTo(x + 25, y - 20 * (1 + wingAngle), x + 35, y - 5);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + 15, y - 2);
-    ctx.lineTo(x + 25, y);
-    ctx.lineTo(x + 15, y + 2);
-    ctx.fill();
-  }
-
-  private drawDragon(x: number, y: number, t: number) {
-    const ctx = this.ctx;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 30, 18, 0, 0, Math.PI * 2);
+    ctx.arc(x + 15, y - 10, 15, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    
+    // Eye
+    if (this.eyeBlink === 0) {
+      this.drawCartoonEye(x + 18, y - 12, 5, 0, 0);
+    }
+    
+    // Beak
+    ctx.fillStyle = '#FFA500';
     ctx.beginPath();
-    ctx.ellipse(x + 30, y - 10, 15, 12, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    const wingFlap = Math.sin(t * 4) * 15;
-    ctx.beginPath();
-    ctx.moveTo(x - 10, y - 15);
-    ctx.lineTo(x - 30, y - 40 - wingFlap);
-    ctx.lineTo(x - 5, y - 20);
+    ctx.moveTo(x + 28, y - 10);
+    ctx.lineTo(x + 38, y - 8);
+    ctx.lineTo(x + 28, y - 6);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    
+    // Wings
+    const wingAngle = Math.sin(this.bouncePhase * 2) * 0.5;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    
     ctx.beginPath();
-    ctx.moveTo(x - 30, y);
-    ctx.quadraticCurveTo(x - 50, y + Math.sin(t * 2) * 15, x - 60, y - 10);
+    ctx.moveTo(x - 5, y - 5);
+    ctx.quadraticCurveTo(x - 30, y - 25 * (1 + wingAngle), x - 35, y - 10);
+    ctx.lineTo(x - 5, y + 5);
+    ctx.closePath();
+    ctx.fill();
     ctx.stroke();
+    
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y);
+    ctx.lineTo(x - 30, y + 5);
+    ctx.lineTo(x - 28, y - 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Legs
+    ctx.strokeStyle = '#FFA500';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y + 15);
+    ctx.lineTo(x - 5, y + 25);
+    ctx.moveTo(x + 5, y + 15);
+    ctx.lineTo(x + 5, y + 25);
+    ctx.stroke();
+  }
+
+  private drawCartoonDragon(x: number, y: number) {
+    const ctx = this.ctx;
+    const color = this.palette.accent[0];
+    
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(x, y + 5, 30, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Head
+    ctx.beginPath();
+    ctx.ellipse(x + 30, y - 15, 18, 15, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Eyes
+    if (this.eyeBlink === 0) {
+      this.drawCartoonEye(x + 28, y - 18, 5, 0, 0);
+      this.drawCartoonEye(x + 38, y - 18, 5, 0, 0);
+    }
+    
+    // Nostrils
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(x + 42, y - 12, 2, 0, Math.PI * 2);
+    ctx.arc(x + 46, y - 12, 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Wings
+    const wingFlap = Math.sin(this.bouncePhase * 1.5) * 20;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y - 10);
+    ctx.lineTo(x - 35, y - 45 - wingFlap);
+    ctx.lineTo(x - 25, y - 35);
+    ctx.lineTo(x - 15, y - 40 - wingFlap * 0.7);
+    ctx.lineTo(x - 5, y - 15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Tail
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(x - 30, y + 5);
+    ctx.quadraticCurveTo(x - 50, y + this.tailWag * 30, x - 60, y - 10);
+    ctx.stroke();
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Tail spike
+    ctx.fillStyle = '#FF4500';
+    ctx.beginPath();
+    ctx.moveTo(x - 60, y - 10);
+    ctx.lineTo(x - 65, y - 15);
+    ctx.lineTo(x - 58, y - 12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Legs
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.fillRect(x - 15, y + 20, 10, 18);
+    ctx.strokeRect(x - 15, y + 20, 10, 18);
+    ctx.fillRect(x + 10, y + 20, 10, 18);
+    ctx.strokeRect(x + 10, y + 20, 10, 18);
+    
+    // Fire breath (if explosion effect)
     if (this.parsed.effects.includes('EXPLOSION')) {
-      ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 0, ${0.5 + Math.random() * 0.3})`;
+      const fireSize = 10 + Math.sin(this.bouncePhase * 3) * 5;
+      ctx.fillStyle = '#FF4500';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(x + 45, y - 10);
-      ctx.lineTo(x + 70 + Math.random() * 20, y - 15 + Math.random() * 10);
-      ctx.lineTo(x + 45, y - 5);
+      ctx.moveTo(x + 48, y - 12);
+      ctx.lineTo(x + 48 + fireSize, y - 15);
+      ctx.lineTo(x + 48 + fireSize * 0.8, y - 10);
+      ctx.lineTo(x + 48 + fireSize * 1.2, y - 8);
+      ctx.lineTo(x + 48, y - 10);
+      ctx.closePath();
       ctx.fill();
+      ctx.stroke();
     }
   }
 
+  // --- CARTOON EFFECTS ---
+  
   private drawParticles() {
     const ctx = this.ctx;
 
     for (const p of this.particles) {
       p.x += p.vx;
       p.y += p.vy;
-      p.life += 0.01;
+      p.vy += 0.05; // gravity
+      p.life += 0.02;
 
       if (p.life > p.maxLife) {
         p.life = 0;
-        p.x = Math.random() * this.width;
-        p.y = Math.random() * this.height;
+        p.x = this.characterX + (Math.random() - 0.5) * 100;
+        p.y = this.characterY;
+        p.vx = (Math.random() - 0.5) * 4;
+        p.vy = -Math.random() * 3 - 2;
       }
 
-      if (p.x < 0) p.x = this.width;
-      if (p.x > this.width) p.x = 0;
-      if (p.y < 0) p.y = this.height;
-      if (p.y > this.height) p.y = 0;
-
-      const alpha = Math.sin((p.life / p.maxLife) * Math.PI);
-      ctx.fillStyle = p.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+      const alpha = 1 - (p.life / p.maxLife);
+      const size = p.size * alpha;
+      
+      // Cartoon sparkle particles
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.life * 2);
+      ctx.fillStyle = p.color;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = alpha;
+      
+      // Draw star shape
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        const outerX = Math.cos(angle) * size;
+        const outerY = Math.sin(angle) * size;
+        const innerAngle = angle + Math.PI / 5;
+        const innerX = Math.cos(innerAngle) * size * 0.4;
+        const innerY = Math.sin(innerAngle) * size * 0.4;
+        
+        if (i === 0) ctx.moveTo(outerX, outerY);
+        else ctx.lineTo(outerX, outerY);
+        ctx.lineTo(innerX, innerY);
+      }
+      ctx.closePath();
       ctx.fill();
+      ctx.stroke();
+      
+      ctx.restore();
     }
   }
 
@@ -541,85 +1177,68 @@ class TurboRenderer {
     const ctx = this.ctx;
     const t = this.frameCount / 30;
 
-    if (this.parsed.effects.includes('TRAIL')) {
-      ctx.strokeStyle = this.parsed.colors[0] + '40';
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 5; i++) {
-        ctx.beginPath();
-        ctx.moveTo(
-          this.width / 2 + Math.sin(t + i) * 50,
-          this.height / 2 + Math.cos(t + i) * 30
-        );
-        ctx.lineTo(
-          this.width / 2 + Math.sin(t + i + 0.5) * 80,
-          this.height / 2 + Math.cos(t + i + 0.5) * 50
-        );
-        ctx.stroke();
+    // Speed lines when moving fast
+    const shot = this.getCurrentShot();
+    if (shot.action === 'ACTION' || shot.action === 'ENTER' || shot.action === 'EXIT') {
+      const direction = shot.action === 'EXIT' ? 1 : -1;
+      this.drawSpeedLines(this.characterX, this.characterY, direction, 4);
+    }
+
+    // Comic text effects
+    if (this.parsed.effects.includes('EXPLOSION') && Math.floor(t * 2) % 3 === 0) {
+      const texts = ['POW!', 'ZAP!', 'BAM!', 'BOOM!'];
+      const text = texts[Math.floor(t) % texts.length];
+      const color = this.palette.accent[Math.floor(t) % this.palette.accent.length];
+      this.drawComicText(text, this.characterX + 80, this.characterY - 60, color, 1);
+    }
+
+    // Sparkles around character
+    if (this.parsed.effects.includes('GLOW') || this.parsed.style === 'NEON') {
+      for (let i = 0; i < 3; i++) {
+        const angle = (t * 2 + i * 2) % (Math.PI * 2);
+        const radius = 50 + Math.sin(t * 3 + i) * 10;
+        const sx = this.characterX + Math.cos(angle) * radius;
+        const sy = this.characterY + Math.sin(angle) * radius;
+        const color = this.palette.accent[i % this.palette.accent.length];
+        this.drawCartoonSparkle(sx, sy, 8 + Math.sin(t * 4 + i) * 3, color);
       }
     }
 
+    // Wave effect
     if (this.parsed.effects.includes('WAVE')) {
-      const waveRadius = ((t * 50) % 200);
-      ctx.strokeStyle = this.parsed.colors[0] + Math.floor((1 - waveRadius / 200) * 100).toString(16).padStart(2, '0');
-      ctx.lineWidth = 2;
+      const waveRadius = ((t * 40) % 150);
+      const alpha = 1 - waveRadius / 150;
+      ctx.strokeStyle = this.palette.accent[0];
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(this.width / 2, this.height / 2, waveRadius, 0, Math.PI * 2);
+      ctx.arc(this.characterX, this.characterY, waveRadius, 0, Math.PI * 2);
       ctx.stroke();
-    }
-
-    if (this.parsed.effects.includes('EXPLOSION')) {
-      const burstPhase = (t * 2) % 3;
-      if (burstPhase < 0.5) {
-        const burstAlpha = 1 - burstPhase * 2;
-        ctx.fillStyle = `rgba(255, 200, 0, ${burstAlpha * 0.3})`;
-        ctx.beginPath();
-        ctx.arc(this.width / 2, this.height / 2, burstPhase * 200, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.globalAlpha = 1;
     }
   }
 
   private drawHUD(shot: Shot) {
     const ctx = this.ctx;
-    const t = this.frameCount / 30;
-
-    ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
-    ctx.font = '10px monospace';
-    ctx.fillText(`FRM: ${this.frameCount.toString().padStart(4, '0')}`, 10, 20);
-    ctx.fillText(`SHOT: ${shot.id}/${this.shots.length}`, 10, 35);
-    ctx.fillText(`CAM: ${shot.camera}`, 10, 50);
-
-    const scanY = (t * 100) % this.height;
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, scanY);
-    ctx.lineTo(this.width, scanY);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
-    ctx.lineWidth = 1;
-    const m = 15;
-    const s = 30;
-    ctx.beginPath();
-    ctx.moveTo(m, m + s); ctx.lineTo(m, m); ctx.lineTo(m + s, m);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(this.width - m - s, m); ctx.lineTo(this.width - m, m); ctx.lineTo(this.width - m, m + s);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(m, this.height - m - s); ctx.lineTo(m, this.height - m); ctx.lineTo(m + s, this.height - m);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(this.width - m - s, this.height - m); ctx.lineTo(this.width - m, this.height - m); ctx.lineTo(this.width - m, this.height - m - s);
-    ctx.stroke();
+    
+    // Cartoon-style HUD (minimal, doesn't interfere with cartoon look)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(10, 10, 120, 50);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, 120, 50);
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 12px Arial';
+    ctx.fillText(`SHOT ${shot.id}/${this.shots.length}`, 20, 30);
+    ctx.fillText(`CAM: ${shot.camera}`, 20, 48);
   }
 
   renderFrame(): void {
     this.applyCameraTransform(this.getCurrentShot());
     this.drawBackground();
-    this.drawEffects();
     this.drawSubject(this.getCurrentShot());
+    this.drawEffects();
     this.drawParticles();
     this.drawHUD(this.getCurrentShot());
     this.ctx.restore();
@@ -629,6 +1248,13 @@ class TurboRenderer {
   reset() {
     this.frameCount = 0;
     this.particles = [];
+    this.sparkles = [];
+    this.comicTexts = [];
+    this.characterX = this.width / 2;
+    this.characterY = this.height * 0.65;
+    this.characterScaleX = 1;
+    this.characterScaleY = 1;
+    this.characterRotation = 0;
     this.initParticles();
   }
 }
@@ -824,14 +1450,44 @@ interface FinalOutputProps {
 
 function FinalOutput({ data, visible }: FinalOutputProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showPlayButton, setShowPlayButton] = useState(false);
 
   useEffect(() => {
     if (visible && data && videoRef.current) {
       const video = videoRef.current;
       video.muted = true;
-      video.play().catch(() => {});
+      
+      // Try to autoplay
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Autoplay blocked, show play button
+          setShowPlayButton(true);
+        });
+      }
+      
+      // Listen for when video is ready
+      const handleCanPlay = () => {
+        video.play().catch(() => {
+          setShowPlayButton(true);
+        });
+      };
+      
+      video.addEventListener('canplay', handleCanPlay);
+      return () => {
+        video.removeEventListener('canplay', handleCanPlay);
+      };
     }
   }, [visible, data]);
+
+  const handlePlayClick = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = true;
+      videoRef.current.play().then(() => {
+        setShowPlayButton(false);
+      }).catch(() => {});
+    }
+  };
 
   if (!visible || !data) return null;
 
@@ -849,7 +1505,7 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          <h2 className="text-sm font-bold text-green-400 uppercase">Generation Complete — Auto-Playing</h2>
+          <h2 className="text-sm font-bold text-green-400 uppercase">Cartoon Video Ready</h2>
         </div>
         <button
           onClick={handleDownload}
@@ -871,8 +1527,26 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
             playsInline
             controls
           />
+          
+          {/* Play button overlay if autoplay blocked */}
+          {showPlayButton && (
+            <div 
+              className="absolute inset-0 flex items-center justify-center bg-black/50 cursor-pointer hover:bg-black/30 transition-colors"
+              onClick={handlePlayClick}
+            >
+              <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border-2 border-white/50 hover:scale-110 transition-transform">
+                <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            </div>
+          )}
+          
           <div className="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 text-[9px] rounded text-white font-mono pointer-events-none">
             {data.duration}
+          </div>
+          <div className="absolute top-1 left-1 bg-red-600/80 px-1.5 py-0.5 text-[9px] rounded text-white font-mono font-bold pointer-events-none">
+            ● CARTOON
           </div>
         </div>
 
@@ -897,8 +1571,16 @@ function FinalOutput({ data, visible }: FinalOutputProps) {
             <span className="text-gray-500">FORMAT</span>
             <span className="text-white">WebM (VP8/VP9)</span>
           </div>
+          <div className="flex justify-between border-b border-gray-800 pb-1">
+            <span className="text-gray-500">RESOLUTION</span>
+            <span className="text-white">640×360</span>
+          </div>
+          <div className="flex justify-between border-b border-gray-800 pb-1">
+            <span className="text-gray-500">FPS</span>
+            <span className="text-white">30</span>
+          </div>
           <div className="mt-2 p-2 bg-gray-800/50 rounded text-[9px] text-gray-400 italic border-l-2 border-green-500">
-            "Rendered in <span className="text-green-400 font-bold">{data.renderTime}</span> using Canvas API + MediaRecorder."
+            "Real cartoon-style animation rendered in <span className="text-green-400 font-bold">{data.renderTime}</span> using Canvas API + MediaRecorder. Features bold outlines, flat colors, squash-and-stretch animation, and comic effects."
           </div>
         </div>
       </div>
@@ -1080,6 +1762,8 @@ function App() {
 
       // Real-time render loop
       await new Promise<void>((resolve) => {
+        let prevFrameTime = 0;
+        let currentFps = 30;
         const renderLoop = (timestamp: number) => {
           const elapsed = timestamp - startTime;
 
@@ -1091,10 +1775,15 @@ function App() {
           if (timestamp - lastFrameTime >= frameInterval) {
             renderer.renderFrame();
             framesRendered++;
+            
+            // Calculate FPS from frame delta
+            if (prevFrameTime > 0) {
+              const frameDelta = timestamp - prevFrameTime;
+              currentFps = Math.min(Math.round(1000 / frameDelta), 60);
+              setFps(currentFps);
+            }
+            prevFrameTime = timestamp;
             lastFrameTime = timestamp;
-
-            const currentFps = Math.round(1000 / (timestamp - lastFrameTime + 1));
-            setFps(currentFps);
 
             const progress = Math.round((elapsed / recordDuration) * 100);
             setRenderProgress(progress);
