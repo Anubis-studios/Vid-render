@@ -1,4 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  createRenderer,
+  AVAILABLE_STYLES,
+  DURATION_OPTIONS,
+  RESOLUTION_OPTIONS,
+  FPS_OPTIONS,
+  type RenderOptions,
+} from './renderers';
 
 // --- Types ---
 type StageStatus = 'PENDING' | 'PROCESSING' | 'DONE';
@@ -1317,6 +1325,14 @@ interface ControlPanelProps {
   setOverrideFx: (v: boolean) => void;
   overrideMotion: boolean;
   setOverrideMotion: (v: boolean) => void;
+  selectedStyle: string;
+  setSelectedStyle: (v: string) => void;
+  duration: number;
+  setDuration: (v: number) => void;
+  resolution: string;
+  setResolution: (v: string) => void;
+  fps: number;
+  setFps: (v: number) => void;
   onStart: () => void;
   isRunning: boolean;
 }
@@ -1324,7 +1340,9 @@ interface ControlPanelProps {
 function ControlPanel({
   prompt, setPrompt, shotCount, setShotCount,
   formatType, setFormatType, overrideFx, setOverrideFx,
-  overrideMotion, setOverrideMotion, onStart, isRunning
+  overrideMotion, setOverrideMotion, selectedStyle, setSelectedStyle,
+  duration, setDuration, resolution, setResolution, fps, setFps,
+  onStart, isRunning
 }: ControlPanelProps) {
   return (
     <div className="lg:col-span-4 space-y-4">
@@ -1337,19 +1355,85 @@ function ControlPanel({
           placeholder="Describe scene..."
         />
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 space-y-3">
           <div>
-            <label className="text-[10px] text-gray-500 block mb-1 uppercase">Shots</label>
+            <label className="text-[10px] text-gray-500 block mb-1 uppercase">Visual Style</label>
             <select
-              value={shotCount}
-              onChange={(e) => setShotCount(parseInt(e.target.value))}
+              value={selectedStyle}
+              onChange={(e) => setSelectedStyle(e.target.value)}
               className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
             >
-              <option value={3}>3 Shots</option>
-              <option value={4}>4 Shots</option>
-              <option value={5}>5 Shots</option>
+              {AVAILABLE_STYLES.map((style) => (
+                <option key={style.id} value={style.id}>
+                  {style.name}
+                </option>
+              ))}
             </select>
+            <div className="mt-1 text-[9px] text-purple-400 italic">
+              {AVAILABLE_STYLES.find(s => s.id === selectedStyle)?.description}
+            </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Duration</label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
+                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+              >
+                {DURATION_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Resolution</label>
+              <select
+                value={resolution}
+                onChange={(e) => setResolution(e.target.value)}
+                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+              >
+                {RESOLUTION_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Frame Rate</label>
+              <select
+                value={fps}
+                onChange={(e) => setFps(parseInt(e.target.value))}
+                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+              >
+                {FPS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1 uppercase">Shots</label>
+              <select
+                value={shotCount}
+                onChange={(e) => setShotCount(parseInt(e.target.value))}
+                className="w-full bg-black/50 border border-gray-600 rounded p-2 text-xs text-white"
+              >
+                <option value={3}>3 Shots</option>
+                <option value={4}>4 Shots</option>
+                <option value={5}>5 Shots</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="text-[10px] text-gray-500 block mb-1 uppercase">Format</label>
             <select
@@ -1600,6 +1684,12 @@ function App() {
   const [outputData, setOutputData] = useState<OutputData | null>(null);
   const [liveMode, setLiveMode] = useState(false);
 
+  // New render options
+  const [selectedStyle, setSelectedStyle] = useState('CARTOON');
+  const [duration, setDuration] = useState(6);
+  const [resolution, setResolution] = useState('480p');
+  const [targetFps, setTargetFps] = useState(30);
+
   const [statusText, setStatusText] = useState('WAITING...');
   const [statusColor, setStatusColor] = useState('bg-gray-600');
   const [pipelineStatus, setPipelineStatus] = useState('IDLE');
@@ -1663,11 +1753,14 @@ function App() {
         await new Promise(r => setTimeout(r, 200));
         parsed = analyzePrompt(prompt);
         const details = [
-          `STYLE: ${parsed.style}`,
+          `RENDER: ${selectedStyle}`,
           `MOOD: ${parsed.mood}`,
           `SUBJECTS: ${parsed.subjects.join(', ')}`,
           `ENV: ${parsed.environment}`,
           `FX: ${parsed.effects.join(', ')}`,
+          `DUR: ${duration}s`,
+          `RES: ${resolution}`,
+          `FPS: ${targetFps}`,
         ].join(' | ');
         updateStage(1, { detail: details });
       });
@@ -1721,14 +1814,28 @@ function App() {
 
       // --- STAGE 5 & 6: REAL-TIME RENDER + RECORD ---
       const canvas = canvasRef.current;
+      
+      // Set canvas size based on resolution
+      const resOption = RESOLUTION_OPTIONS.find(r => r.value === resolution) || RESOLUTION_OPTIONS[0];
+      canvas.width = resOption.width;
+      canvas.height = resOption.height;
+      
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context failed');
 
-      const renderer = new TurboRenderer(canvas, parsed!, shots!);
+      // Create renderer based on selected style
+      const renderOptions: RenderOptions = {
+        duration,
+        fps: targetFps,
+        resolution,
+        style: selectedStyle,
+      };
+      
+      const renderer = createRenderer(selectedStyle, canvas, parsed!, shots!, renderOptions);
       const startTime = performance.now();
-      const recordDuration = 6000; // 6 seconds
-      const targetFPS = 30;
-      const frameInterval = 1000 / targetFPS;
+      const recordDuration = duration * 1000; // Convert to milliseconds
+      const frameInterval = 1000 / targetFps;
+      const targetFPS = targetFps; // Alias for compatibility
       let lastFrameTime = 0;
       let framesRendered = 0;
 
@@ -1820,7 +1927,7 @@ function App() {
       setOutputData({
         id: finalId,
         duration: totalDuration + 's',
-        style: parsed.style,
+        style: selectedStyle,
         size: `${sizeMB} MB`,
         renderTime: renderTime + 's',
         videoUrl,
@@ -1828,7 +1935,7 @@ function App() {
       });
 
       updateStage(5, {
-        detail: `COMPLETE: ${framesRendered} FRAMES @ ${targetFPS}FPS | ${renderTime}s`,
+        detail: `COMPLETE: ${selectedStyle} | ${framesRendered} FRAMES @ ${targetFPS}FPS | ${renderTime}s`,
         barWidth: 100,
       });
       
@@ -1883,6 +1990,14 @@ function App() {
           setOverrideFx={setOverrideFx}
           overrideMotion={overrideMotion}
           setOverrideMotion={setOverrideMotion}
+          selectedStyle={selectedStyle}
+          setSelectedStyle={setSelectedStyle}
+          duration={duration}
+          setDuration={setDuration}
+          resolution={resolution}
+          setResolution={setResolution}
+          fps={targetFps}
+          setFps={setTargetFps}
           onStart={startPipeline}
           isRunning={isRunning}
         />
