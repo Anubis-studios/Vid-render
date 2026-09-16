@@ -1,0 +1,341 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Inconsolata:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-mono: 'Inconsolata', monospace;
+  --font-display: 'Cinzel', serif;
+}
+
+body {
+  font-family: 'Inconsolata', monospace;
+  background-color: #050505;
+  color: #d4af37;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse at top, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom, rgba(184, 134, 11, 0.03) 0%, transparent 50%);
+}
+
+/* Luxury Scanline Effect - subtle gold */
+.scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(212, 175, 55, 0),
+    rgba(212, 175, 55, 0) 50%,
+    rgba(0, 0, 0, 0.15) 50%,
+    rgba(0, 0, 0, 0.15)
+  );
+  background-size: 100% 4px;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.08;
+}
+
+/* Gold Glows */
+.gold-text {
+  color: #d4af37;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.5), 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+.gold-text-bright {
+  color: #f4e5c2;
+  text-shadow: 0 0 10px rgba(244, 229, 194, 0.6), 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.gold-border {
+  border: 1px solid #d4af37;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3), inset 0 0 10px rgba(212, 175, 55, 0.1);
+}
+
+/* Luxury Shimmer Animation */
+@keyframes gold-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    #b8860b 0%,
+    #d4af37 25%,
+    #f4e5c2 50%,
+    #d4af37 75%,
+    #b8860b 100%
+  );
+  background-size: 200% auto;
+  animation: gold-shimmer 3s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes pulse-fast {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-pulse-fast { animation: pulse-fast 1s infinite; }
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.slide-up { animation: slide-up 0.3s ease-out forwards; }
+
+@keyframes luxury-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.6), 0 0 30px rgba(212, 175, 55, 0.3); }
+}
+.animate-luxury-glow { animation: luxury-glow 2s ease-in-out infinite; }
+
+/* Custom Scrollbar - Gold */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #b8860b, #d4af37, #b8860b);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #d4af37, #f4e5c2, #d4af37);
+}
+
+/* Luxury Stage Cards */
+.stage-card {
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(20, 15, 5, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  border-left: 3px solid #3d2f0f;
+  border-right: 1px solid rgba(212, 175, 55, 0.1);
+  border-top: 1px solid rgba(212, 175, 55, 0.05);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.stage-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(212, 175, 55, 0.02) 100%);
+  pointer-events: none;
+}
+
+.stage-card.active {
+  border-left-color: #d4af37;
+  background: linear-gradient(135deg, rgba(20, 15, 5, 0.95) 0%, rgba(40, 30, 10, 0.9) 100%);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2), inset 0 0 20px rgba(212, 175, 55, 0.05);
+}
+
+.stage-card.completed {
+  border-left-color: #d4af37;
+  opacity: 0.8;
+  background: linear-gradient(135deg, rgba(15, 12, 5, 0.95) 0%, rgba(30, 22, 8, 0.9) 100%);
+}
+
+/* Gold Loader Bar */
+.loader-bar {
+  height: 2px;
+  background: linear-gradient(90deg, #b8860b, #d4af37, #f4e5c2, #d4af37, #b8860b);
+  background-size: 200% auto;
+  animation: gold-shimmer 2s linear infinite;
+  width: 0%;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+/* Luxury Button */
+.luxury-button {
+  background: linear-gradient(135deg, #b8860b 0%, #d4af37 50%, #b8860b 100%);
+  color: #000000;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border: 1px solid #f4e5c2;
+  box-shadow:
+    0 0 15px rgba(212, 175, 55, 0.4),
+    inset 0 1px 0 rgba(244, 229, 194, 0.5),
+    inset 0 -1px 0 rgba(184, 134, 11, 0.5);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.luxury-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(244, 229, 194, 0.4),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.luxury-button:hover::before {
+  left: 100%;
+}
+
+.luxury-button:hover {
+  box-shadow:
+    0 0 25px rgba(212, 175, 55, 0.7),
+    inset 0 1px 0 rgba(244, 229, 194, 0.7),
+    inset 0 -1px 0 rgba(184, 134, 11, 0.7);
+  transform: translateY(-1px);
+}
+
+.luxury-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Luxury Select/Input */
+.luxury-input {
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.9) 0%, rgba(20, 15, 5, 0.9) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #d4af37;
+  transition: all 0.3s ease;
+}
+
+.luxury-input:focus {
+  border-color: #d4af37;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+  outline: none;
+}
+
+/* Art Deco Corner Decorations */
+.art-deco-corner {
+  position: relative;
+}
+
+.art-deco-corner::before,
+.art-deco-corner::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  pointer-events: none;
+}
+
+.art-deco-corner::before {
+  top: 4px;
+  left: 4px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.art-deco-corner::after {
+  bottom: 4px;
+  right: 4px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Luxury Panel */
+.luxury-panel {
+  background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(15, 12, 5, 0.95) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow:
+    0 0 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(212, 175, 55, 0.1);
+  position: relative;
+}
+
+.luxury-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+}
+
+/* Gold Divider */
+.gold-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d4af37, transparent);
+  margin: 8px 0;
+  opacity: 0.5;
+}
+
+/* Luxury Checkbox */
+input[type="checkbox"].luxury-check {
+  accent-color: #d4af37;
+}
+
+/* Status indicators */
+.status-gold {
+  color: #d4af37;
+  text-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+}
+
+.status-success {
+  color: #d4af37;
+  text-shadow: 0 0 8px rgba(212, 175, 55, 0.7);
+}
+
+/* Font classes */
+.font-display {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.1em;
+}
+
+/* Luxury background pattern */
+.luxury-bg-pattern {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 35px,
+      rgba(212, 175, 55, 0.02) 35px,
+      rgba(212, 175, 55, 0.02) 36px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 35px,
+      rgba(212, 175, 55, 0.02) 35px,
+      rgba(212, 175, 55, 0.02) 36px
+    );
+}
+
+/* Video output luxury frame */
+.luxury-video-frame {
+  position: relative;
+  background: #000;
+  border: 2px solid #d4af37;
+  box-shadow:
+    0 0 30px rgba(212, 175, 55, 0.4),
+    inset 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+.luxury-video-frame::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  pointer-events: none;
+}
+
+.luxury-video-frame::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  pointer-events: none;
+}
